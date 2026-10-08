@@ -71,7 +71,7 @@
     (or dir
         (getenv "BENCHPILOT_STORE_DIR")
         (path->string (build-path (or (getenv "USERPROFILE") (getenv "HOME") ".")
-                                  ".benchpilot" "store"))))
+                                  ".flashpilot" "store"))))
   (make-directory* (build-path path "artifacts"))
   (persist-store path (make-semaphore 1)))
 
