@@ -12,7 +12,7 @@ struct RivetHostApp: App {
         WindowGroup(RivetGeneratedConfig.displayName) {
             ContentView()
                 .environmentObject(model)
-                .frame(minWidth: 520, minHeight: 360)
+                .frame(minWidth: 560, minHeight: 480)
                 .task { model.start() }
                 // URL schemes and file associations are declared from
                 // rivet.rktd during packaging. Keep activation handling in the
@@ -25,9 +25,13 @@ struct RivetHostApp: App {
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var status = "Starting embedded Racket CS…"
-    @Published var count: Int64 = 0
     @Published var ready = false
+    @Published var backendStatus = "Starting embedded Racket CS…"
+    @Published var benchStatus = ""
+    @Published var validateResult = ""
+    @Published var planResult = ""
+    @Published var planPath = "~/flashpilot/plan.json"
+    @Published var dtcResult = ""
 
     private var backend: EmbeddedRacketBackend?
 
@@ -46,36 +50,71 @@ final class AppModel: ObservableObject {
                 do {
                     try backend.start()
                     let api = RivetAPI(client: backend.client)
-                    let initialCount = try await api.getCounter()
+                    let status = try await api.bench_status()
                     await MainActor.run {
-                        self.count = initialCount
                         self.ready = true
-                        self.status = "Embedded Racket CS is ready"
+                        self.benchStatus = status
+                        self.backendStatus = "Embedded Racket CS is ready"
                     }
                 } catch {
                     await MainActor.run {
                         self.ready = false
-                        self.status = "Backend error: \(error)"
+                        self.backendStatus = "Backend error: \(error)"
                     }
                 }
             }
         } catch {
-            status = "Configuration error: \(error)"
+            backendStatus = "Configuration error: \(error)"
         }
     }
 
-    func increment() {
+    func refreshStatus() {
         guard let backend, ready else { return }
-        let next = count + 1
-
         Task {
             do {
                 let api = RivetAPI(client: backend.client)
-                count = try await api.setCounter(next)
+                benchStatus = try await api.bench_status()
             } catch {
-                status = "State error: \(error)"
+                backendStatus = "Status error: \(error)"
             }
         }
     }
 
+    func validate() {
+        guard let backend, ready else { return }
+        Task {
+            do {
+                let api = RivetAPI(client: backend.client)
+                validateResult = try await api.bench_validate()
+            } catch {
+                validateResult = "Error: \(error)"
+            }
+        }
+    }
+
+    func verifyPlan() {
+        guard let backend, ready else { return }
+        let path = planPath
+        Task {
+            do {
+                let api = RivetAPI(client: backend.client)
+                let expanded = (path as NSString).expandingTildeInPath
+                planResult = try await api.verify_plan(planPath: expanded)
+            } catch {
+                planResult = "Error: \(error)"
+            }
+        }
+    }
+
+    func readDtc() {
+        guard let backend, ready else { return }
+        Task {
+            do {
+                let api = RivetAPI(client: backend.client)
+                dtcResult = try await api.dtc_read()
+            } catch {
+                dtcResult = "Error: \(error)"
+            }
+        }
+    }
 }
