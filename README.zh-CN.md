@@ -1,6 +1,6 @@
 # FlashPilot
 
-**AI 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
+**Agent 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
 专注且免授权费的 vFlash 替代品：一个无常驻进程的 CLI、确定性 JSON、永不撒谎的退出码，以及让 agent 自我诊断的失败证据。
 
 [![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
