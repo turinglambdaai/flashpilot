@@ -1,0 +1,4 @@
+compiled/
+*.zo
+*.so
+dist/
