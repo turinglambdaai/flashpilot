@@ -26,5 +26,9 @@ jobs:
           version: '9.3'
       - name: Install package
         run: raco pkg install --auto --name flashpilot --link racket
+      - name: Install Rivet (catalog)
+        run: raco pkg install --auto --no-docs rivet
+      - name: Compile Rivet backend
+        run: raco make app/backend.rkt
       - name: Test (UDS/ISO-TP/flash plans/DTC/providers)
         run: raco test racket/flashpilot
