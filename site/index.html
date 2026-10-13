@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashPilot — Agent 原生的 ECU 刷写</title>
+<meta name="description" content="FlashPilot：免授权费的 vFlash 替代品。声明式烧录计划、UDS over CAN（ISO-TP）/DoIP/LIN、确定性 JSON、永不撒谎的退出码、有界失败证据，为编码 agent 与 CI 而生。Rivet 线——Racket 引擎驱动原生壳。">
+<link rel="stylesheet" href="styles.css">
+<script>
+  (function () {
+    var t = localStorage.getItem('flashpilot-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+    var l = localStorage.getItem('flashpilot-lang');
+    if (!l) l = (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+  })();
+</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#">FlashPilot</a>
+    <nav class="nav-links">
+      <a href="#why" data-i18n="nav.why">为什么需要</a>
+      <a href="#design" data-i18n="nav.design">设计原则</a>
+      <a href="#start" data-i18n="nav.start">三步开始</a>
+      <a href="#download" data-i18n="nav.download">下载</a>
+      <a href="https://github.com/turinglambdaai/flashpilot" data-i18n="nav.github">GitHub</a>
+      <div class="lang-dropdown-wrapper">
+        <button class="lang-btn" type="button" aria-label="Switch language">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span id="current-lang-label">English</span>
+        </button>
+        <ul class="lang-menu">
+          <li onclick="setLanguage('en')">English</li>
+          <li onclick="setLanguage('zh')">简体中文</li>
+        </ul>
+      </div>
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">◐</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="kicker" data-i18n="kicker">免授权费 · 无常驻进程 · 为 agent 而生</p>
+    <h1 data-i18n="hero-title">给 agent 一条诚实的 ECU 烧录线。</h1>
+    <p class="lede" data-i18n="hero-lede">
+      汽车刷写的现状是 vFlash：按席位收费、Windows GUI、agent 开不动的
+      COM API。AI 时代，烧录知识的编写成本坍塌了——agent 能照着 OEM
+      规格书起草烧录计划，剩下的价值在闭环：生成计划 → 校验指纹 → 带
+      保护地烧录 → 收集失败证据 → 重新生成。FlashPilot 就是为这个闭环而生。
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#download" data-i18n="hero.get">获取 FlashPilot</a>
+      <a class="btn btn-secondary" href="https://github.com/turinglambdaai/flashpilot" data-i18n="hero.source">查看源码</a>
+    </div>
+  </section>
+
+  <section id="why" class="section">
+    <h2 data-i18n="why-title">为什么做 FlashPilot</h2>
+    <div class="grid three">
+      <div class="card">
+        <div class="card-icon">💰</div>
+        <h3 data-i18n="w1-title">授权费是旧时代的税</h3>
+        <p data-i18n="w1-body">刷写是工程活，不该按席位订阅。FlashPilot 免授权费，从开发机到 CI 到产线，想跑多少跑多少。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <h3 data-i18n="w2-title">GUI 和 COM API，agent 开不动</h3>
+        <p data-i18n="w2-body">上一代工具的自动化入口是 COM API 和 GUI 宏——agent 的母语是命令行。无常驻进程的 CLI、确定性 JSON 输出，一条命令跑完整条烧录链。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <h3 data-i18n="w3-title">失败不该是一句报错</h3>
+        <p data-i18n="w3-body">刷写失败时，传统工具让人开厂商工具翻日志。FlashPilot 落下有界、带指纹、可审计的失败证据，agent 自己诊断、自己重试，不用人插手。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="design" class="section alt">
+    <h2 data-i18n="design-title">设计原则</h2>
+    <div class="grid two">
+      <div class="card">
+        <h3 data-i18n="p1-title">声明式烧录计划</h3>
+        <p data-i18n="p1-body">一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹——可版本化、可评审、可复用。</p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="p2-title">指纹门禁，先验证后动手</h3>
+        <p data-i18n="p2-body">expectedFingerprint 把镜像钉死在计划里；指纹不对，在任何驱动调用之前就拒绝——刷错的成本是一次变砖，不是一次重跑。</p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="p3-title">安全默认</h3>
+        <p data-i18n="p3-body">编程电源守卫轮询电流，越界即断电中止；破坏性计划明说；失败恢复 retry / resetAndRetry 二选一。默认就是安全的，而不是配置出来的。</p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="p4-title">退出码永不撒谎</h3>
+        <p data-i18n="p4-body">0 成功 · 1 断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="start" class="section">
+    <h2 data-i18n="start-title">三步开始</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3 data-i18n="s1-title">装上引擎</h3>
+          <p data-i18n="s1-body">Racket 包一行装好，引擎与 CLI 即在本地可用。</p>
+          <div class="code">git clone https://github.com/turinglambdaai/flashpilot.git
+cd flashpilot
+raco pkg install --auto --name flashpilot --link racket</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3 data-i18n="s2-title">内置模拟 ECU 空跑闭环</h3>
+          <p data-i18n="s2-body">默认传输是内置模拟 ECU——真实的 ISO-TP/UDS 栈，全程无需硬件，CI 里也能跑完整烧录闭环。</p>
+          <div class="code">racket app/cli.rkt flash examples/plan.sim.json</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3 data-i18n="s3-title">换上真车</h3>
+          <p data-i18n="s3-body">改传输参数指向真实 ECU：SocketCAN（Linux）、PEAK PCAN（Windows）或 DoIP 以太网。</p>
+          <div class="code">racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="section alt">
+    <h2 data-i18n="download-title">下载</h2>
+    <div class="dl-grid">
+      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot/releases">
+        <h3>Windows（x64）/ Linux</h3>
+        <p data-i18n="dl-cli">CLI 安装包随首个发布交付，敬请期待。当前可从源码运行：clone 仓库、raco pkg install，一条命令空跑模拟 ECU。</p>
+        <span class="btn btn-primary" data-i18n="dl-watch">关注发布 →</span>
+      </a>
+      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot">
+        <h3>原生宿主</h3>
+        <p data-i18n="dl-host">原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。</p>
+        <span class="btn btn-secondary" data-i18n="dl-progress">了解进展 →</span>
+      </a>
+      <div class="dl-card">
+        <h3 data-i18n="dl-platforms-title">平台</h3>
+        <p class="platform-row">
+          <span class="chip ok">Windows</span>
+          <span class="chip ok">Linux</span>
+          <span class="chip">macOS</span>
+        </p>
+        <p class="muted" data-i18n="dl-platforms-body">
+          现状：CLI 在 Windows / Linux 构建，模拟 ECU 全链路在 CI 硬件无关跑通；首个发布交付三平台安装包。这是开发者工具，不做移动端。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 data-i18n="roadmap-title">路线图</h2>
+    <ul>
+      <li><strong>M1</strong> — <span data-i18n="rm1">首个发布：三平台安装包与文档</span></li>
+      <li><strong>M2</strong> — <span data-i18n="rm2">UDS over LIN：LIN 传输与调度表</span></li>
+      <li><strong>M3</strong> — <span data-i18n="rm3">DoIP 以太网对真实 ECU 加固</span></li>
+      <li><strong>M4</strong> — <span data-i18n="rm4">烧录计划库：常见 OEM / 供应商场景开箱即用</span></li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <span>AGPL-3.0 · <a href="https://github.com/turinglambdaai/flashpilot">github.com/turinglambdaai/flashpilot</a></span>
+  <span data-i18n="footer-note">为 agent 与 CI 而生：确定性 JSON、稳定退出码、有界失败证据。Rivet 线——Racket 引擎驱动原生壳。</span>
+</footer>
+
+<script>
+(function () {
+  var I18N = {
+    en: {
+      'nav.why': 'Why', 'nav.design': 'Design', 'nav.start': 'Get started',
+      'nav.download': 'Download', 'nav.github': 'GitHub',
+      'kicker': 'license-free · no resident process · built for agents',
+      'hero-title': 'An honest ECU flashing line for agents.',
+      'hero-lede': "Automotive flashing today means vFlash: per-seat licenses, a Windows GUI, and a COM API agents cannot drive. In the AI era the authoring cost of flashing knowledge collapses — an agent can draft a flash plan from an OEM spec. The value left is the loop: generate a plan → verify its fingerprint → flash with guards → collect evidence on failure → regenerate. FlashPilot is built around that loop.",
+      'hero.get': 'Get FlashPilot', 'hero.source': 'View source',
+      'why-title': 'Why FlashPilot',
+      'w1-title': 'Per-seat licenses are an old-era tax',
+      'w1-body': 'Flashing is engineering work, not a subscription. FlashPilot is license-free — dev machine, CI, or production line, run it as much as you want.',
+      'w2-title': 'GUIs and COM APIs are a dead end for agents',
+      'w2-body': "The previous generation automates through COM APIs and GUI macros — but an agent's native tongue is the command line. One resident-free CLI with deterministic JSON output runs the whole flashing chain in a single command.",
+      'w3-title': 'Failure should be more than one error line',
+      'w3-body': 'When a flash fails, legacy tools send a human into a vendor GUI to dig through logs. FlashPilot drops bounded, fingerprinted, auditable failure evidence — the agent diagnoses and retries on its own.',
+      'design-title': 'Design principles',
+      'p1-title': 'Declarative flash plans',
+      'p1-body': 'One JSON document per ECU: segments (inline / BIN / Intel HEX / S-record), session, security access, erase & verify routines, timings, recovery strategy, power guard, expected fingerprint — versionable, reviewable, reusable.',
+      'p2-title': 'Fingerprint gate: verify before you touch',
+      'p2-body': 'expectedFingerprint pins the image inside the plan; on mismatch FlashPilot rejects it before any driver call — a wrong flash costs a bricked ECU, not a rerun.',
+      'p3-title': 'Safe by default',
+      'p3-body': 'The in-programming power guard polls current and cuts power on out-of-band readings; destructive plans say so; recovery is retry or reset-and-retry. Safety is the default, not a configuration.',
+      'p4-title': 'Exit codes that never lie',
+      'p4-body': '0 ok · 1 assert failed · 2 usage · 3 not found · 4 transport. Every command prints one JSON object — camelCase, stable field names, bounded error text. No screen-scraping, no guessing.',
+      'start-title': 'Get started in three steps',
+      's1-title': 'Install the engine',
+      's1-body': 'One line installs the Racket package; the engine and CLI are ready locally.',
+      's2-title': 'Run the loop hardware-free',
+      's2-body': 'The default transport is a built-in simulated ECU — the real ISO-TP/UDS stack, no hardware required, and the full flashing loop runs in CI.',
+      's3-title': 'Point it at a real ECU',
+      's3-body': 'Switch the transport: SocketCAN (Linux), PEAK PCAN (Windows), or DoIP over Ethernet.',
+      'download-title': 'Download',
+      'dl-cli': 'CLI packages ship with the first release — stay tuned. For now, run from source: clone, raco pkg install, and one command against the simulated ECU.',
+      'dl-host': 'Native hosts advance with the Rivet line; three-platform installers land with the first release.',
+      'dl-watch': 'Watch releases →', 'dl-progress': 'Follow progress →',
+      'dl-platforms-title': 'Platforms',
+      'dl-platforms-body': 'Today: the CLI builds on Windows / Linux and the full simulated-ECU loop runs hardware-free in CI; the first release ships installers for all three desktops. A developer tool — no mobile.',
+      'roadmap-title': 'Roadmap',
+      'rm1': 'First release: three-platform installers and docs',
+      'rm2': 'UDS over LIN: LIN transport and schedule tables',
+      'rm3': 'DoIP Ethernet hardening against real ECUs',
+      'rm4': 'Plan library: common OEM / supplier scenarios out of the box',
+      'footer-note': 'Built for agents and CI: deterministic JSON, exit codes that never lie, bounded failure evidence. Rivet line — a Racket engine driving native shells.'
+    },
+    zh: {
+      'nav.why': '为什么需要', 'nav.design': '设计原则', 'nav.start': '三步开始',
+      'nav.download': '下载', 'nav.github': 'GitHub',
+      'kicker': '免授权费 · 无常驻进程 · 为 agent 而生',
+      'hero-title': '给 agent 一条诚实的 ECU 烧录线。',
+      'hero-lede': '汽车刷写的现状是 vFlash：按席位收费、Windows GUI、agent 开不动的 COM API。AI 时代，烧录知识的编写成本坍塌了——agent 能照着 OEM 规格书起草烧录计划，剩下的价值在闭环：生成计划 → 校验指纹 → 带保护地烧录 → 收集失败证据 → 重新生成。FlashPilot 就是为这个闭环而生。',
+      'hero.get': '获取 FlashPilot', 'hero.source': '查看源码',
+      'why-title': '为什么做 FlashPilot',
+      'w1-title': '授权费是旧时代的税',
+      'w1-body': '刷写是工程活，不该按席位订阅。FlashPilot 免授权费，从开发机到 CI 到产线，想跑多少跑多少。',
+      'w2-title': 'GUI 和 COM API，agent 开不动',
+      'w2-body': '上一代工具的自动化入口是 COM API 和 GUI 宏——agent 的母语是命令行。无常驻进程的 CLI、确定性 JSON 输出，一条命令跑完整条烧录链。',
+      'w3-title': '失败不该是一句报错',
+      'w3-body': '刷写失败时，传统工具让人开厂商工具翻日志。FlashPilot 落下有界、带指纹、可审计的失败证据，agent 自己诊断、自己重试，不用人插手。',
+      'design-title': '设计原则',
+      'p1-title': '声明式烧录计划',
+      'p1-body': '一份 JSON 描述一个 ECU：段（内联 / BIN / Intel HEX / S-record）、会话、安全访问、擦写校验例程、时序、恢复策略、电源守卫、期望指纹——可版本化、可评审、可复用。',
+      'p2-title': '指纹门禁，先验证后动手',
+      'p2-body': 'expectedFingerprint 把镜像钉死在计划里；指纹不对，在任何驱动调用之前就拒绝——刷错的成本是一次变砖，不是一次重跑。',
+      'p3-title': '安全默认',
+      'p3-body': '编程电源守卫轮询电流，越界即断电中止；破坏性计划明说；失败恢复 retry / resetAndRetry 二选一。默认就是安全的，而不是配置出来的。',
+      'p4-title': '退出码永不撒谎',
+      'p4-body': '0 成功 · 1 断言失败 · 2 用法错误 · 3 未找到 · 4 传输错误；每条命令打印一个 JSON 对象——camelCase、字段名稳定、错误文本有界，不用抓屏去猜。',
+      'start-title': '三步开始',
+      's1-title': '装上引擎',
+      's1-body': 'Racket 包一行装好，引擎与 CLI 即在本地可用。',
+      's2-title': '内置模拟 ECU 空跑闭环',
+      's2-body': '默认传输是内置模拟 ECU——真实的 ISO-TP/UDS 栈，全程无需硬件，CI 里也能跑完整烧录闭环。',
+      's3-title': '换上真车',
+      's3-body': '改传输参数指向真实 ECU：SocketCAN（Linux）、PEAK PCAN（Windows）或 DoIP 以太网。',
+      'download-title': '下载',
+      'dl-cli': 'CLI 安装包随首个发布交付，敬请期待。当前可从源码运行：clone 仓库、raco pkg install，一条命令空跑模拟 ECU。',
+      'dl-host': '原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。',
+      'dl-watch': '关注发布 →', 'dl-progress': '了解进展 →',
+      'dl-platforms-title': '平台',
+      'dl-platforms-body': '现状：CLI 在 Windows / Linux 构建，模拟 ECU 全链路在 CI 硬件无关跑通；首个发布交付三平台安装包。这是开发者工具，不做移动端。',
+      'roadmap-title': '路线图',
+      'rm1': '首个发布：三平台安装包与文档',
+      'rm2': 'UDS over LIN：LIN 传输与调度表',
+      'rm3': 'DoIP 以太网对真实 ECU 加固',
+      'rm4': '烧录计划库：常见 OEM / 供应商场景开箱即用',
+      'footer-note': '为 agent 与 CI 而生：确定性 JSON、稳定退出码、有界失败证据。Rivet 线——Racket 引擎驱动原生壳。'
+    }
+  };
+
+  function setLang(lang) {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    var dict = I18N[lang];
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      if (dict[key]) el.textContent = dict[key];
+    });
+    document.getElementById('current-lang-label').textContent = lang === 'zh' ? '简体中文' : 'English';
+    localStorage.setItem('flashpilot-lang', lang);
+  }
+
+  window.setLanguage = setLang;
+
+  document.querySelector('.lang-btn').addEventListener('click', function () {
+    var menu = document.querySelector('.lang-menu');
+    menu.classList.toggle('open');
+  });
+
+  document.getElementById('theme-btn').addEventListener('click', function () {
+    var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('flashpilot-theme', next);
+  });
+
+  setLang(document.documentElement.lang === 'zh-CN' ? 'zh' : 'en');
+})();
+</script>
+</body>
+</html>
