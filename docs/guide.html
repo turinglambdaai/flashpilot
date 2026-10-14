@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashPilot — 用户手册</title>
+<meta name="description" content="FlashPilot 用户手册：五分钟免硬件上手模拟 ECU 烧录闭环，flash / verify / dtc / request / udid 命令详解，声明式 flash plan 写法与常见问题。">
+<link rel="stylesheet" href="styles.css">
+<script>
+  (function () {
+    var t = localStorage.getItem('flashpilot-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+    var l = localStorage.getItem('flashpilot-lang');
+    if (!l) l = (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+  })();
+</script>
+<style>
+  .manual-hero { max-width: 1080px; margin: 0 auto; padding: 44px 24px 8px; }
+  .manual-hero .kicker { color: var(--accent); font-size: 14px; letter-spacing: .08em; margin: 0 0 10px; }
+  .manual-hero h1 { margin: 0 0 10px; font-size: 34px; line-height: 1.25; }
+  .manual-hero .lede { color: var(--muted); margin: 0; max-width: 760px; }
+  .manual-layout { max-width: 1080px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 220px 1fr; gap: 40px; align-items: start; }
+  .manual-toc { position: sticky; top: 24px; font-size: 14px; }
+  .manual-toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0; }
+  .manual-toc a:hover { color: var(--accent); }
+  .manual-toc-group { font-weight: 700; color: var(--ink); margin: 14px 0 4px; }
+  .manual-body section { margin: 0 0 56px; scroll-margin-top: 24px; }
+  .manual-body h2 { font-size: 24px; margin: 0 0 12px; }
+  .manual-body h3 { font-size: 17px; margin: 22px 0 8px; }
+  .manual-body p, .manual-body li { color: var(--ink); }
+  .manual-body .muted-p { color: var(--muted); font-size: 14px; }
+  .manual-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  .manual-body th, .manual-body td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  .manual-body th { background: var(--chip-bg); }
+  .manual-body td code { white-space: nowrap; }
+  .callout { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--surface); border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 14px; }
+  .callout-title { font-weight: 700; margin-bottom: 4px; }
+  .cmd-head { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; color: var(--accent); margin: 0 0 6px; }
+  .out { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; overflow-x: auto; white-space: pre; margin: 10px 0 14px; }
+  .out .ok-tag { color: var(--accent); font-weight: 700; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 22px 24px; display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 860px) { .manual-layout { grid-template-columns: 1fr; } .manual-toc { position: static; } }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">FlashPilot</a>
+    <nav class="nav-links">
+      <a href="index.html#why" data-i18n="nav.why">为什么需要</a>
+      <a href="index.html#design" data-i18n="nav.design">设计原则</a>
+      <a href="index.html#download" data-i18n="nav.download">下载</a>
+      <a href="guide.html" data-i18n="nav.guide" style="color:var(--accent)">手册</a>
+      <a href="https://github.com/turinglambdaai/flashpilot" data-i18n="nav.github">GitHub</a>
+      <div class="lang-dropdown-wrapper">
+        <button class="lang-btn" type="button" aria-label="Switch language">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span id="current-lang-label">English</span>
+        </button>
+        <ul class="lang-menu">
+          <li onclick="setLanguage('en')">English</li>
+          <li onclick="setLanguage('zh')">简体中文</li>
+        </ul>
+      </div>
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">◐</button>
+    </nav>
+  </div>
+</header>
+
+<section class="manual-hero">
+  <p class="kicker" data-i18n="g.kicker">v0.1.0 · 2026-10-14 · CLI 手册</p>
+  <h1 data-i18n="g.title">FlashPilot 用户手册</h1>
+  <p class="lede" data-i18n="g.lede">五分钟免硬件跑通第一条烧录闭环；每条命令的真实输出都可以直接复制粘贴。FlashPilot 是无常驻进程的 CLI，输出一个 JSON 对象、退出码永不撒谎——人和 agent 都能照着本页操作。</p>
+</section>
+
+<div class="manual-layout manual-body">
+
+  <aside class="manual-toc" id="toc">
+    <div class="manual-toc-group" data-i18n="g.toc-start">上手</div>
+    <a href="#quickstart" data-i18n="g.toc-quickstart">五分钟上手</a>
+    <a href="#outputs" data-i18n="g.toc-outputs">读懂输出与退出码</a>
+    <div class="manual-toc-group" data-i18n="g.toc-cmds">命令</div>
+    <a href="#cmd-flash" data-i18n="g.toc-flash">flash — 执行烧录计划</a>
+    <a href="#cmd-verify" data-i18n="g.toc-verify">verify — 只验计划不碰 ECU</a>
+    <a href="#cmd-dtc" data-i18n="g.toc-dtc">dtc — 读取/清除故障码</a>
+    <a href="#cmd-request" data-i18n="g.toc-request">request — 单条原始 UDS 请求</a>
+    <a href="#cmd-udid" data-i18n="g.toc-udid">udid — 读取 DID</a>
+    <div class="manual-toc-group" data-i18n="g.toc-plan">烧录计划</div>
+    <a href="#plan" data-i18n="g.toc-plan-write">声明式 flash plan 写法</a>
+    <div class="manual-toc-group" data-i18n="g.toc-faq">FAQ</div>
+    <a href="#faq" data-i18n="g.toc-faq-link">常见问题</a>
+  </aside>
+
+  <main>
+
+    <!-- ============ Five-minute start ============ -->
+    <section id="quickstart">
+      <h2 data-i18n="g.qs-title">五分钟上手</h2>
+      <p data-i18n="g.qs-lede">不需要任何硬件：默认传输层是内置模拟 ECU，一条命令跑完 session → security access → erase → download → verify → reset 全闭环。</p>
+
+      <h3 data-i18n="g.qs-step1">1 · 下载并解压 CLI</h3>
+      <p><span data-i18n="g.qs-step1-p">到</span><a href="https://github.com/turinglambdaai/flashpilot/releases/latest">Releases</a><span data-i18n="g.qs-step1-p2">按平台下载 zip（每个资产都有同名 .sha256，仓库根另有汇总的 SHA256SUMS）：</span></p>
+      <table>
+        <thead>
+          <tr><th data-i18n="g.qs-asset">资产</th><th data-i18n="g.qs-os">平台 / 架构</th><th data-i18n="g.qs-bin">解压后可执行文件</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>flashpilot-0.1.0-windows-x64.zip</code></td><td>Windows · x64</td><td><code>flashpilot.exe</code></td></tr>
+          <tr><td><code>flashpilot-0.1.0-linux-x64.zip</code></td><td>Linux · x64</td><td><code>bin/flashpilot</code></td></tr>
+          <tr><td><code>flashpilot-0.1.0-linux-arm64.zip</code></td><td>Linux · arm64</td><td><code>bin/flashpilot</code></td></tr>
+          <tr><td><code>flashpilot-0.1.0-macos-arm64.zip</code></td><td>macOS · Apple Silicon</td><td><code>bin/flashpilot</code></td></tr>
+          <tr><td><code>flashpilot-0.1.0-macos-x64.zip</code></td><td>macOS · Intel</td><td><code>bin/flashpilot</code></td></tr>
+        </tbody>
+      </table>
+      <p data-i18n="g.qs-unzip-p">macOS / Linux：</p>
+      <div class="code">unzip flashpilot-0.1.0-macos-arm64.zip -d flashpilot
+./flashpilot/bin/flashpilot --help</div>
+      <p data-i18n="g.qs-unzip-win">Windows（PowerShell）：</p>
+      <div class="code">Expand-Archive flashpilot-0.1.0-windows-x64.zip -DestinationPath flashpilot
+.\flashpilot\flashpilot.exe --help</div>
+      <p class="muted-p" data-i18n="g.qs-macos-note">macOS 首次运行如被 Gatekeeper 拦截：右键可执行文件 →「打开」，或执行 xattr -d com.apple.quarantine bin/flashpilot。</p>
+
+      <h3 data-i18n="g.qs-step2">2 · 免硬件跑第一条烧录（模拟 ECU）</h3>
+      <p data-i18n="g.qs-step2-p">zip 里自带 examples/plan.sim.json 与示例固件，解压目录内直接执行：</p>
+      <div class="code"><span data-i18n="g.qs-step2-mac">macOS / Linux</span>
+./flashpilot/bin/flashpilot flash examples/plan.sim.json
+
+<span data-i18n="g.qs-step2-win">Windows</span>
+.\flashpilot\flashpilot.exe flash examples\plan.sim.json</div>
+      <p data-i18n="g.qs-step2-out">真实输出：</p>
+      <div class="out">{"bytes":30,"error":null,"fingerprint":"144252e810505c9f","ok":true,"steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}</div>
+      <p data-i18n="g.qs-step2-read">这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（BenchPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。</p>
+
+      <h3 data-i18n="g.qs-step3">3 · 读证据输出</h3>
+      <p data-i18n="g.qs-step3-p">每条命令只在 stdout 打印一个 JSON 对象：ok 表示成败，失败时 code + 有界 error 文本说明原因，flash 成功时 fingerprint 是本次镜像的确定性指纹。详细字段见下一节。</p>
+    </section>
+
+    <!-- ============ Outputs ============ -->
+    <section id="outputs">
+      <h2 data-i18n="g.out-title">读懂输出与退出码</h2>
+      <p data-i18n="g.out-p">退出码五档，永不撒谎；脚本和 agent 按码分流，不必解析自然语言：</p>
+      <table>
+        <thead><tr><th data-i18n="g.out-code">退出码</th><th data-i18n="g.out-mean">含义</th><th data-i18n="g.out-when">典型场景</th></tr></thead>
+        <tbody>
+          <tr><td><code>0</code></td><td data-i18n="g.out-c0">成功</td><td data-i18n="g.out-c0w">命令按预期完成</td></tr>
+          <tr><td><code>1</code></td><td data-i18n="g.out-c1">烧录 / 断言失败</td><td data-i18n="g.out-c1w">指纹不匹配、ECU 否定响应、镜像校验失败</td></tr>
+          <tr><td><code>2</code></td><td data-i18n="g.out-c2">用法错误</td><td data-i18n="g.out-c2w">未知命令、缺参数、计划文件不存在</td></tr>
+          <tr><td><code>3</code></td><td data-i18n="g.out-c3">未找到</td><td data-i18n="g.out-c3w">资源不存在（保留档位）</td></tr>
+          <tr><td><code>4</code></td><td data-i18n="g.out-c4">传输层错误</td><td data-i18n="g.out-c4w">连接失败、协议栈内部错误</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <div class="callout-title">🛡 <span data-i18n="g.out-gate-title">指纹门是第一道证据</span></div>
+        <span data-i18n="g.out-gate-body">计划里写了 expectedFingerprint 时，指纹不匹配在任何驱动调用之前就被拒绝——ECU 一次都不会被碰：</span>
+      </div>
+      <div class="out"><span class="ok-tag">$</span> flashpilot flash plan.json
+{"code":"fingerprint_mismatch","error":"Image fingerprint 144252e810505c9f does not match expectedFingerprint deadbeefdeadbeef.","ok":false}
+<span data-i18n="g.out-gate-exit">退出码</span> 1</div>
+    </section>
+
+    <!-- ============ flash ============ -->
+    <section id="cmd-flash">
+      <h2>flash</h2>
+      <p class="cmd-head">flashpilot flash &lt;plan.json&gt; [--transport doip --host H] [--port N] [--tester T] [--ecu E]</p>
+      <p data-i18n="g.flash-p">执行一份声明式烧录计划：默认对接内置模拟 ECU；--transport doip + --host 指向真机（ISO 13400-2，默认端口 13400）。</p>
+      <div class="code"><span data-i18n="g.flash-sim">模拟 ECU（免硬件）</span>
+flashpilot flash examples/plan.sim.json
+
+<span data-i18n="g.flash-doip">真机（DoIP over Ethernet）</span>
+flashpilot flash plan.doip.json --transport doip --host 192.168.0.1
+flashpilot flash plan.doip.json --transport doip --host 192.168.0.1 --port 13400 --tester 0E00 --ecu 0E10</div>
+      <p data-i18n="g.flash-flags-p">关键点：</p>
+      <ul>
+        <li data-i18n="g.flash-f1">--tester / --ecu 是 DoIP 逻辑地址（十六进制），默认 0E00 / 0E10；--port 缺省 13400。</li>
+        <li data-i18n="g.flash-f2">计划里的 onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。</li>
+        <li data-i18n="g.flash-f3">成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。</li>
+      </ul>
+    </section>
+
+    <!-- ============ verify ============ -->
+    <section id="cmd-verify">
+      <h2>verify</h2>
+      <p class="cmd-head">flashpilot verify &lt;plan.json&gt;</p>
+      <p data-i18n="g.verify-p">只做计划校验与指纹计算，完全不接触 ECU——上真机前的强制关卡，也是把镜像钉进计划的工作流起点：</p>
+      <div class="code">flashpilot verify examples/plan.sim.json</div>
+      <div class="out">{"expected":null,"fingerprint":"144252e810505c9f","match":null,"ok":true,"segments":1}</div>
+      <p data-i18n="g.verify-flow">推荐工作流：verify 拿到 fingerprint → 写进计划的 expectedFingerprint → 再 verify 一次确认 match:true → 才允许 flash。写好之后：</p>
+      <div class="out">{"expected":"144252e810505c9f","fingerprint":"144252e810505c9f","match":true,"ok":true,"segments":1}</div>
+    </section>
+
+    <!-- ============ dtc ============ -->
+    <section id="cmd-dtc">
+      <h2>dtc</h2>
+      <p class="cmd-head">flashpilot dtc [read|clear]</p>
+      <p data-i18n="g.dtc-p">诊断故障码：read 走 UDS 0x19 readDTCInformation，clear 走 0x14 clearDiagnosticInformation。支持 --transport doip 切真机。</p>
+      <div class="code">flashpilot dtc read
+flashpilot dtc clear</div>
+      <div class="out"><span class="ok-tag">$</span> flashpilot dtc read
+{"dtcs":{"availableMask":47,"dtcs":[{"dtc":"0x010870","status":"0x2f"}]},"ok":true}
+
+<span class="ok-tag">$</span> flashpilot dtc clear
+{"cleared":true,"ok":true}</div>
+    </section>
+
+    <!-- ============ request ============ -->
+    <section id="cmd-request">
+      <h2>request</h2>
+      <p class="cmd-head">flashpilot request &lt;hex&gt;</p>
+      <p data-i18n="g.request-p">发一条原始 UDS 请求（十六进制字节串），适合探测与脚本化诊断。否定响应时输出 NRC（负响应码）的可读名，退出码 1：</p>
+      <div class="out"><span class="ok-tag">$</span> flashpilot request 1003
+{"nrc":null,"ok":true,"positive":true,"responseHex":"03003201f4"}
+
+<span class="ok-tag">$</span> flashpilot request 22F195
+{"nrc":null,"ok":true,"positive":true,"responseHex":"f19542656e636850696c6f742073696d2d6563752076312e302e34"}
+
+<span class="ok-tag">$</span> flashpilot request DEADBEEF
+{"nrc":"serviceNotSupported","ok":true,"positive":false,"responseHex":null}
+<span data-i18n="g.out-gate-exit">退出码</span> 1</div>
+      <p class="muted-p" data-i18n="g.request-note">1003 = 切扩展会话，响应里 0032 / 01F4 是 P2=50ms、P2*=500ms 时序参数。</p>
+    </section>
+
+    <!-- ============ udid ============ -->
+    <section id="cmd-udid">
+      <h2>udid</h2>
+      <p class="cmd-head">flashpilot udid &lt;did&gt;</p>
+      <p data-i18n="g.udid-p">读取一个数据标识符（UDS 0x22 readDataByIdentifier），DID 接受 0x 前缀十六进制或十进制。responseHex 的前两字节是回显的 DID，其后是数据：</p>
+      <div class="code">flashpilot udid 0xF195</div>
+      <div class="out">{"ok":true,"positive":true,"responseHex":"f19542656e636850696c6f742073696d2d6563752076312e302e34"}</div>
+      <p class="muted-p" data-i18n="g.udid-note">f195 之后按 ASCII 解码即模拟 ECU 的身份串：BenchPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。</p>
+    </section>
+
+    <!-- ============ Flash plans ============ -->
+    <section id="plan">
+      <h2 data-i18n="g.plan-title">声明式 flash plan 写法</h2>
+      <p data-i18n="g.plan-lede">一份 JSON 描述一个 ECU 的完整烧录事务。它就是仓库里 examples/plan.sim.json 的完整形态（相对路径以计划文件所在目录为基准）：</p>
+      <div class="code">{
+  "segments": [
+    { "address": "0x08000000", "file": "fw.bin" },
+    { "address": "0x08010000", "data": "DEADBEEF" }
+  ],
+  "maxBlockPayload": 1024,
+  "session": 2,
+  "securityLevel": 1,
+  "keyDeriver": "xor0x5a",
+  "eraseRoutineId": "0xFF00",
+  "verifyRoutineId": "0xFF01",
+  "p2TimeoutMs": 1000,
+  "p2StarTimeoutMs": 10000,
+  "onFail": "resetAndRetry",
+  "powerGuard": { "minMa": 5, "maxMa": 1500, "pollMs": 200 },
+  "expectedFingerprint": "144252e810505c9f"
+}</div>
+      <table>
+        <thead><tr><th data-i18n="g.plan-field">字段</th><th data-i18n="g.plan-mean">含义</th></tr></thead>
+        <tbody>
+          <tr><td><code>segments[].address</code></td><td data-i18n="g.plan-address">目标地址，支持 0x 十六进制或十进制</td></tr>
+          <tr><td><code>segments[].data</code> / <code>file</code></td><td data-i18n="g.plan-data">内联十六进制串，或指向原始 .bin 镜像的路径（相对计划文件目录解析，二选一）</td></tr>
+          <tr><td><code>session</code> / <code>securityLevel</code></td><td data-i18n="g.plan-session">诊断会话与安全访问等级；securityLevel 存在时先走 0x27 seed-key</td></tr>
+          <tr><td><code>keyDeriver</code></td><td data-i18n="g.plan-key">内置 xor0x5a；OEM 专有算法用 command:./your-algo 接外部命令（seed 走 stdin/参数、key 回 stdout，厂商代码不进引擎）</td></tr>
+          <tr><td><code>onFail</code></td><td data-i18n="g.plan-onfail">retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）</td></tr>
+          <tr><td><code>powerGuard</code></td><td data-i18n="g.plan-power">编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止</td></tr>
+          <tr><td><code>expectedFingerprint</code></td><td data-i18n="g.plan-fp">指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝</td></tr>
+          <tr><td><code>p2TimeoutMs</code> / <code>p2StarTimeoutMs</code> / <code>maxBlockPayload</code> / <code>eraseRoutineId</code> / <code>verifyRoutineId</code> / <code>blockRetries</code></td><td data-i18n="g.plan-timing">时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动</td></tr>
+        </tbody>
+      </table>
+      <p data-i18n="g.plan-img">Intel HEX / S-record 解析器已在镜像模型层就绪（含按连续区域合并），计划段直接引用 .hex / .s19 的接线在后续版本开放；当前段文件请提供原始 .bin。</p>
+      <div class="callout">
+        <div class="callout-title">🤖 <span data-i18n="g.plan-agent-title">给 agent 的提示</span></div>
+        <span data-i18n="g.plan-agent-body">计划是纯 JSON、可版本化、可评审：让 agent 从 OEM 规格书起草计划 → flashpilot verify 拿指纹 → 回写 expectedFingerprint → 模拟 ECU 上全量预演 → 再上真机。每一步的输出都是确定性 JSON。</span>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section id="faq">
+      <h2 data-i18n="g.faq-title">常见问题</h2>
+
+      <h3 data-i18n="g.faq-q1">支持哪些平台？</h3>
+      <p data-i18n="g.faq-a1">Windows x64、Linux x64 / arm64、macOS arm64 / x64，共五个 zip 资产，均从 Releases 页下载，SHA256SUMS 可整包校验。</p>
+
+      <h3 data-i18n="g.faq-q2">刷真机需要什么硬件？</h3>
+      <p data-i18n="g.faq-a2">CLI 当前开放两条通道：内置模拟 ECU（免硬件）与 DoIP 以太网真机（任意平台，ECU/网关以太网可达即可，默认端口 13400）。SocketCAN（Linux）与 PEAK PCAN（Windows）的 CAN 传输在引擎层已就绪并有测试覆盖，CLI 接线在后续版本开放。</p>
+
+      <h3 data-i18n="g.faq-q3">和 vFlash 是什么关系？</h3>
+      <p data-i18n="g.faq-a3">定位是专注、免授权费的 vFlash 替代品：无常驻进程的 CLI、确定性 JSON、声明式计划。不做整车网络仿真、没有 CAPL、不做分析窗口合集——只把「生成计划 → 校验指纹 → 带保护烧录 → 收集证据」这一个闭环诚实地做完。</p>
+
+      <h3 data-i18n="g.faq-q4">模拟 ECU 是什么？</h3>
+      <p data-i18n="g.faq-a4">内置的仿真 ECU（自报身份 BenchPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。</p>
+
+      <h3 data-i18n="g.faq-q5">怎么更新？</h3>
+      <p data-i18n="g.faq-a5">v0.1.0 没有自动更新器（没有 updater，我们直说）：到 Releases 页下载新版 zip，解压覆盖旧目录即可。每个发布附 per-资产 .sha256 与汇总 SHA256SUMS。</p>
+
+      <h3 data-i18n="g.faq-q6">怎么卸载？</h3>
+      <p data-i18n="g.faq-a6">删掉解压目录即可。CLI 无常驻进程、不装驱动、不写系统目录或注册表，运行期也不落任何文件；「安装」只是解压，「卸载」只是删除。</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <span>AGPL-3.0 · <a href="https://github.com/turinglambdaai/flashpilot">github.com/turinglambdaai/flashpilot</a></span>
+  <span data-i18n="g.footer">FlashPilot v0.1.0 — 本手册中所有命令输出均为真实运行结果。</span>
+</footer>
+
+<script>
+(function () {
+  var I18N = {
+    en: {
+      'nav.why': 'Why', 'nav.design': 'Design', 'nav.download': 'Download',
+      'nav.guide': 'Manual', 'nav.github': 'GitHub',
+      'g.kicker': 'v0.1.0 · 2026-10-14 · CLI manual',
+      'g.title': 'FlashPilot User Manual',
+      'g.lede': 'Run your first hardware-free flashing loop in five minutes; every command output on this page is real and copy-pasteable. FlashPilot is a resident-free CLI that prints one JSON object with exit codes that never lie — for humans and agents alike.',
+      'g.toc-start': 'Get started', 'g.toc-quickstart': 'Five-minute start',
+      'g.toc-outputs': 'Output & exit codes',
+      'g.toc-cmds': 'Commands',
+      'g.toc-flash': 'flash — run a plan', 'g.toc-verify': 'verify — no ECU contact',
+      'g.toc-dtc': 'dtc — trouble codes', 'g.toc-request': 'request — raw UDS',
+      'g.toc-udid': 'udid — read a DID',
+      'g.toc-plan': 'Flash plans', 'g.toc-plan-write': 'Writing a flash plan',
+      'g.toc-faq': 'FAQ', 'g.toc-faq-link': 'Frequently asked',
+      'g.qs-title': 'Five-minute start',
+      'g.qs-lede': 'No hardware needed: the default transport is a built-in simulated ECU, and one command runs the full session → security access → erase → download → verify → reset loop.',
+      'g.qs-step1': '1 · Download and unpack the CLI',
+      'g.qs-step1-p': 'Grab a zip for your platform from ', 'g.qs-step1-p2': ' (every asset ships a .sha256 sidecar; the repository root has a combined SHA256SUMS):',
+      'g.qs-asset': 'Asset', 'g.qs-os': 'Platform / arch', 'g.qs-bin': 'Binary after unzip',
+      'g.qs-unzip-p': 'macOS / Linux:', 'g.qs-unzip-win': 'Windows (PowerShell):',
+      'g.qs-macos-note': 'If Gatekeeper blocks the first run on macOS: right-click the binary → Open, or run xattr -d com.apple.quarantine bin/flashpilot.',
+      'g.qs-step2': '2 · First flash against the simulated ECU (no hardware)',
+      'g.qs-step2-p': 'The zip carries examples/plan.sim.json plus a sample image — run it from the unpacked directory:',
+      'g.qs-step2-mac': 'macOS / Linux', 'g.qs-step2-win': 'Windows',
+      'g.qs-step2-out': 'Real output:',
+      'g.qs-step2-read': 'This drives the real ISO-TP/UDS stack against the built-in simulated ECU (BenchPilot sim-ecu v1.0.4). The steps array is the six-step flashing audit; on a real ECU the output shape is identical — agents parse the same JSON from the bench to the production line.',
+      'g.qs-step3': '3 · Read the evidence output',
+      'g.qs-step3-p': 'Every command prints exactly one JSON object on stdout: ok tells success, failures carry code plus a bounded error text, and a successful flash reports the deterministic image fingerprint. Field details in the next section.',
+      'g.out-title': 'Output & exit codes',
+      'g.out-p': 'Five exit codes that never lie; scripts and agents branch on the code, not on prose:',
+      'g.out-code': 'Exit code', 'g.out-mean': 'Meaning', 'g.out-when': 'Typical case',
+      'g.out-c0': 'Success', 'g.out-c0w': 'The command completed as expected',
+      'g.out-c1': 'Flash / assert failed', 'g.out-c1w': 'Fingerprint mismatch, negative ECU response, image verify failed',
+      'g.out-c2': 'Usage error', 'g.out-c2w': 'Unknown command, missing argument, plan file not found',
+      'g.out-c3': 'Not found', 'g.out-c3w': 'Resource missing (reserved level)',
+      'g.out-c4': 'Transport error', 'g.out-c4w': 'Connection failure, stack-internal error',
+      'g.out-gate-title': 'The fingerprint gate is the first piece of evidence',
+      'g.out-gate-body': 'When the plan pins expectedFingerprint, a mismatch is rejected before any driver call — the ECU is never touched:',
+      'g.out-gate-exit': 'Exit code ',
+      'g.flash-sim': 'Simulated ECU (hardware-free)', 'g.flash-doip': 'Real ECU (DoIP over Ethernet)',
+      'g.flash-p': 'Runs a declarative flash plan: the built-in simulated ECU by default; --transport doip + --host aim it at a real ECU (ISO 13400-2, port 13400 by default).',
+      'g.flash-flags-p': 'Key points:',
+      'g.flash-f1': '--tester / --ecu are DoIP logical addresses in hex, defaulting to 0E00 / 0E10; --port defaults to 13400.',
+      'g.flash-f2': 'The plan’s onFail (retry / resetAndRetry), powerGuard (out-of-band current cuts power and aborts) and the expectedFingerprint gate all take effect in this one command.',
+      'g.flash-f3': 'On success the steps array is the six-step audit trail; on failure error carries a bounded reason and the exit code is 1.',
+      'g.verify-p': 'Validates the plan and computes the image fingerprint without touching any ECU — the mandatory gate before real hardware, and step one of pinning an image into a plan:',
+      'g.verify-flow': 'Recommended loop: verify to learn the fingerprint → write it into the plan’s expectedFingerprint → verify again to see match:true → only then flash. With the pin in place:',
+      'g.dtc-p': 'Diagnostic trouble codes: read uses UDS 0x19 readDTCInformation, clear uses 0x14 clearDiagnosticInformation. --transport doip switches to a real ECU.',
+      'g.request-p': 'Sends one raw UDS request (a hex byte string) for probing and scripted diagnostics. Negative answers print a readable NRC and exit 1:',
+      'g.request-note': '1003 = extended diagnostic session; 0032 / 01F4 in the response are the timing parameters P2=50ms and P2*=500ms.',
+      'g.udid-p': 'Reads one data identifier (UDS 0x22 readDataByIdentifier); the DID accepts 0x-prefixed hex or decimal. In responseHex the first two bytes echo the DID, the rest is data:',
+      'g.udid-note': 'Decoded as ASCII after f195, that is the simulated ECU’s identity string: BenchPilot sim-ecu v1.0.4. Reading an undefined DID yields a requestOutOfRange negative response (exit 1).',
+      'g.plan-title': 'Writing a declarative flash plan',
+      'g.plan-lede': 'One JSON document describes a complete ECU flashing transaction — the full form of examples/plan.sim.json from the repo (relative paths resolve against the plan’s directory):',
+      'g.plan-field': 'Field', 'g.plan-mean': 'Meaning',
+      'g.plan-address': 'Target address; 0x hex or decimal',
+      'g.plan-data': 'Inline hex string, or a path to a raw .bin image (resolved relative to the plan file; pick one)',
+      'g.plan-session': 'Diagnostic session and security-access level; when securityLevel is present a 0x27 seed-key round runs first',
+      'g.plan-key': 'Built-in xor0x5a; OEM-specific algorithms plug in as command:./your-algo (seed in, key on stdout — vendor code stays outside the engine)',
+      'g.plan-onfail': 'retry (one plain retry) or resetAndRetry (best-effort ECU reset, then one retry)',
+      'g.plan-power': 'Polls the bench supply while programming; below minMa or above maxMa it cuts power and aborts',
+      'g.plan-fp': 'The fingerprint gate: pin the fingerprint reported by verify; a mismatch is rejected before the ECU is touched',
+      'g.plan-timing': 'Timing and routine fine-tuning; defaults 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0 — usually left alone',
+      'g.plan-img': 'Intel HEX / S-record parsers are ready in the image-model layer (with contiguous-region merging); wiring them into plan segments directly lands in a later release — for now supply raw .bin segment files.',
+      'g.plan-agent-title': 'A note for agents',
+      'g.plan-agent-body': 'Plans are plain JSON — versionable and reviewable: have the agent draft a plan from the OEM spec → flashpilot verify for the fingerprint → write expectedFingerprint back → full dress rehearsal on the simulated ECU → only then real hardware. Every step prints deterministic JSON.',
+      'g.faq-title': 'FAQ',
+      'g.faq-q1': 'Which platforms are supported?',
+      'g.faq-a1': 'Windows x64, Linux x64 / arm64, macOS arm64 / x64 — five zip assets, all on the Releases page, verifiable against the per-asset .sha256 files and the combined SHA256SUMS.',
+      'g.faq-q2': 'What hardware do I need for a real ECU?',
+      'g.faq-a2': 'The CLI currently opens two channels: the built-in simulated ECU (hardware-free) and real ECUs over DoIP Ethernet (any platform — an Ethernet-reachable ECU or gateway, default port 13400). The SocketCAN (Linux) and PEAK PCAN (Windows) CAN transports are ready and tested at the engine layer; wiring them into the CLI lands in a later release.',
+      'g.faq-q3': 'How does this relate to vFlash?',
+      'g.faq-a3': 'The positioning is a focused, license-free vFlash alternative: a resident-free CLI, deterministic JSON, declarative plans. No vehicle-network simulation, no CAPL, no analysis-window collection — just one loop done honestly: draft a plan, verify the fingerprint, flash with guards, collect evidence.',
+      'g.faq-q4': 'What is the simulated ECU?',
+      'g.faq-a4': 'A built-in simulated ECU (it identifies itself as BenchPilot sim-ecu v1.0.4): a real ISO-TP (ISO 15765-2) + UDS (ISO 14229) stack in front of an in-memory mock frontend supporting sessions, security access, routines, DTCs, DIDs and the full flashing sequence. The 25 CI tests and the five-minute start both run against it — protocol behavior is identical to a real ECU, minus the physical bus.',
+      'g.faq-q5': 'How do I update?',
+      'g.faq-a5': 'v0.1.0 has no auto-updater (no updater — stated honestly): download the new zip from Releases and replace your unpacked directory. Every release ships per-asset .sha256 files and a combined SHA256SUMS.',
+      'g.faq-q6': 'How do I uninstall?',
+      'g.faq-a6': 'Delete the unpacked directory. The CLI has no resident process, installs no driver, writes nothing to system directories or the registry, and touches no files at runtime; “installing” is unpacking, “uninstalling” is deleting.',
+      'g.footer': 'FlashPilot v0.1.0 — every command output in this manual is from a real run.'
+    },
+    zh: {
+      'nav.why': '为什么需要', 'nav.design': '设计原则', 'nav.download': '下载',
+      'nav.guide': '手册', 'nav.github': 'GitHub',
+      'g.kicker': 'v0.1.0 · 2026-10-14 · CLI 手册',
+      'g.title': 'FlashPilot 用户手册',
+      'g.lede': '五分钟免硬件跑通第一条烧录闭环；每条命令的真实输出都可以直接复制粘贴。FlashPilot 是无常驻进程的 CLI，输出一个 JSON 对象、退出码永不撒谎——人和 agent 都能照着本页操作。',
+      'g.toc-start': '上手', 'g.toc-quickstart': '五分钟上手',
+      'g.toc-outputs': '读懂输出与退出码',
+      'g.toc-cmds': '命令',
+      'g.toc-flash': 'flash — 执行烧录计划', 'g.toc-verify': 'verify — 只验计划不碰 ECU',
+      'g.toc-dtc': 'dtc — 读取/清除故障码', 'g.toc-request': 'request — 单条原始 UDS 请求',
+      'g.toc-udid': 'udid — 读取 DID',
+      'g.toc-plan': '烧录计划', 'g.toc-plan-write': '声明式 flash plan 写法',
+      'g.toc-faq': 'FAQ', 'g.toc-faq-link': '常见问题',
+      'g.qs-title': '五分钟上手',
+      'g.qs-lede': '不需要任何硬件：默认传输层是内置模拟 ECU，一条命令跑完 session → security access → erase → download → verify → reset 全闭环。',
+      'g.qs-step1': '1 · 下载并解压 CLI',
+      'g.qs-step1-p': '到', 'g.qs-step1-p2': '按平台下载 zip（每个资产都有同名 .sha256，仓库根另有汇总的 SHA256SUMS）：',
+      'g.qs-asset': '资产', 'g.qs-os': '平台 / 架构', 'g.qs-bin': '解压后可执行文件',
+      'g.qs-unzip-p': 'macOS / Linux：', 'g.qs-unzip-win': 'Windows（PowerShell）：',
+      'g.qs-macos-note': 'macOS 首次运行如被 Gatekeeper 拦截：右键可执行文件 →「打开」，或执行 xattr -d com.apple.quarantine bin/flashpilot。',
+      'g.qs-step2': '2 · 免硬件跑第一条烧录（模拟 ECU）',
+      'g.qs-step2-p': 'zip 里自带 examples/plan.sim.json 与示例固件，解压目录内直接执行：',
+      'g.qs-step2-mac': 'macOS / Linux', 'g.qs-step2-win': 'Windows',
+      'g.qs-step2-out': '真实输出：',
+      'g.qs-step2-read': '这条命令驱动的是真实的 ISO-TP/UDS 协议栈，对面是内置模拟 ECU（BenchPilot sim-ecu v1.0.4）。步骤名就是烧录工作流的六步审计；换到真机上，输出结构一模一样——agent 可以用同一套解析逻辑从模拟环境平滑迁到产线。',
+      'g.qs-step3': '3 · 读证据输出',
+      'g.qs-step3-p': '每条命令只在 stdout 打印一个 JSON 对象：ok 表示成败，失败时 code + 有界 error 文本说明原因，flash 成功时 fingerprint 是本次镜像的确定性指纹。详细字段见下一节。',
+      'g.out-title': '读懂输出与退出码',
+      'g.out-p': '退出码五档，永不撒谎；脚本和 agent 按码分流，不必解析自然语言：',
+      'g.out-code': '退出码', 'g.out-mean': '含义', 'g.out-when': '典型场景',
+      'g.out-c0': '成功', 'g.out-c0w': '命令按预期完成',
+      'g.out-c1': '烧录 / 断言失败', 'g.out-c1w': '指纹不匹配、ECU 否定响应、镜像校验失败',
+      'g.out-c2': '用法错误', 'g.out-c2w': '未知命令、缺参数、计划文件不存在',
+      'g.out-c3': '未找到', 'g.out-c3w': '资源不存在（保留档位）',
+      'g.out-c4': '传输层错误', 'g.out-c4w': '连接失败、协议栈内部错误',
+      'g.out-gate-title': '指纹门是第一道证据',
+      'g.out-gate-body': '计划里写了 expectedFingerprint 时，指纹不匹配在任何驱动调用之前就被拒绝——ECU 一次都不会被碰：',
+      'g.out-gate-exit': '退出码 ',
+      'g.flash-sim': '模拟 ECU（免硬件）', 'g.flash-doip': '真机（DoIP over Ethernet）',
+      'g.flash-p': '执行一份声明式烧录计划：默认对接内置模拟 ECU；--transport doip + --host 指向真机（ISO 13400-2，默认端口 13400）。',
+      'g.flash-flags-p': '关键点：',
+      'g.flash-f1': '--tester / --ecu 是 DoIP 逻辑地址（十六进制），默认 0E00 / 0E10；--port 缺省 13400。',
+      'g.flash-f2': '计划里的 onFail（retry / resetAndRetry）、powerGuard（编程中电流越界即断电中止）与 expectedFingerprint 门都在这条命令里生效。',
+      'g.flash-f3': '成功时 steps 数组是六步审计轨迹；失败时 error 给有界原因，退出码 1。',
+      'g.verify-p': '只做计划校验与指纹计算，完全不接触 ECU——上真机前的强制关卡，也是把镜像钉进计划的工作流起点：',
+      'g.verify-flow': '推荐工作流：verify 拿到 fingerprint → 写进计划的 expectedFingerprint → 再 verify 一次确认 match:true → 才允许 flash。写好之后：',
+      'g.dtc-p': '诊断故障码：read 走 UDS 0x19 readDTCInformation，clear 走 0x14 clearDiagnosticInformation。支持 --transport doip 切真机。',
+      'g.request-p': '发一条原始 UDS 请求（十六进制字节串），适合探测与脚本化诊断。否定响应时输出 NRC（负响应码）的可读名，退出码 1：',
+      'g.request-note': '1003 = 切扩展会话，响应里 0032 / 01F4 是 P2=50ms、P2*=500ms 时序参数。',
+      'g.udid-p': '读取一个数据标识符（UDS 0x22 readDataByIdentifier），DID 接受 0x 前缀十六进制或十进制。responseHex 的前两字节是回显的 DID，其后是数据：',
+      'g.udid-note': 'f195 之后按 ASCII 解码即模拟 ECU 的身份串：BenchPilot sim-ecu v1.0.4。读取模拟 ECU 未定义的 DID 会得到 requestOutOfRange 否定响应（退出码 1）。',
+      'g.plan-title': '声明式 flash plan 写法',
+      'g.plan-lede': '一份 JSON 描述一个 ECU 的完整烧录事务。它就是仓库里 examples/plan.sim.json 的完整形态（相对路径以计划文件所在目录为基准）：',
+      'g.plan-field': '字段', 'g.plan-mean': '含义',
+      'g.plan-address': '目标地址，支持 0x 十六进制或十进制',
+      'g.plan-data': '内联十六进制串，或指向原始 .bin 镜像的路径（相对计划文件目录解析，二选一）',
+      'g.plan-session': '诊断会话与安全访问等级；securityLevel 存在时先走 0x27 seed-key',
+      'g.plan-key': '内置 xor0x5a；OEM 专有算法用 command:./your-algo 接外部命令（seed 走 stdin/参数、key 回 stdout，厂商代码不进引擎）',
+      'g.plan-onfail': 'retry（原样重试一次）或 resetAndRetry（尽力复位 ECU 再重试一次）',
+      'g.plan-power': '编程中轮询台架电源电流；低于 minMa 或高于 maxMa 即断电中止',
+      'g.plan-fp': '指纹门：verify 算出的指纹写死在计划里，不匹配在触碰 ECU 之前就拒绝',
+      'g.plan-timing': '时序与例程微调，缺省 1000 / 10000 / 1024 / 0xFF00 / 0xFF01 / 0，通常不用动',
+      'g.plan-img': 'Intel HEX / S-record 解析器已在镜像模型层就绪（含按连续区域合并），计划段直接引用 .hex / .s19 的接线在后续版本开放；当前段文件请提供原始 .bin。',
+      'g.plan-agent-title': '给 agent 的提示',
+      'g.plan-agent-body': '计划是纯 JSON、可版本化、可评审：让 agent 从 OEM 规格书起草计划 → flashpilot verify 拿指纹 → 回写 expectedFingerprint → 模拟 ECU 上全量预演 → 再上真机。每一步的输出都是确定性 JSON。',
+      'g.faq-title': '常见问题',
+      'g.faq-q1': '支持哪些平台？',
+      'g.faq-a1': 'Windows x64、Linux x64 / arm64、macOS arm64 / x64，共五个 zip 资产，均从 Releases 页下载，SHA256SUMS 可整包校验。',
+      'g.faq-q2': '刷真机需要什么硬件？',
+      'g.faq-a2': 'CLI 当前开放两条通道：内置模拟 ECU（免硬件）与 DoIP 以太网真机（任意平台，Fireserver/网关+网线即可，默认端口 13400）。SocketCAN（Linux）与 PEAK PCAN（Windows）的 CAN 传输在引擎层已就绪并有测试覆盖，CLI 接线在后续版本开放。',
+      'g.faq-q3': '和 vFlash 是什么关系？',
+      'g.faq-a3': '定位是专注、免授权费的 vFlash 替代品：无常驻进程的 CLI、确定性 JSON、声明式计划。不做整车网络仿真、没有 CAPL、不做分析窗口合集——只把「生成计划 → 校验指纹 → 带保护烧录 → 收集证据」这一个闭环诚实地做完。',
+      'g.faq-q4': '模拟 ECU 是什么？',
+      'g.faq-a4': '内置的仿真 ECU（自报身份 BenchPilot sim-ecu v1.0.4）：真实的 ISO-TP（ISO 15765-2）+ UDS（ISO 14229）协议栈后面是内存里的模拟前端，支持会话、安全访问、例程、DTC、DID 与完整烧录序列。CI 的 25 项测试与五分钟上手跑的都是它——协议行为与真机同构，只是没有总线上的物理层。',
+      'g.faq-q5': '怎么更新？',
+      'g.faq-a5': 'v0.1.0 没有自动更新器（没有 updater，我们直说）：到 Releases 页下载新版 zip，解压覆盖旧目录即可。每个发布附 per-资产 .sha256 与汇总 SHA256SUMS。',
+      'g.faq-q6': '怎么卸载？',
+      'g.faq-a6': '删掉解压目录即可。CLI 无常驻进程、不装驱动、不写系统目录或注册表，运行期也不落任何文件；「安装」只是解压，「卸载」只是删除。',
+      'g.footer': 'FlashPilot v0.1.0 — 本手册中所有命令输出均为真实运行结果。'
+    }
+  };
+
+  function setLang(lang) {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    var dict = I18N[lang];
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      if (dict[key]) el.textContent = dict[key];
+    });
+    document.getElementById('current-lang-label').textContent = lang === 'zh' ? '简体中文' : 'English';
+    localStorage.setItem('flashpilot-lang', lang);
+  }
+
+  window.setLanguage = setLang;
+
+  document.querySelector('.lang-btn').addEventListener('click', function () {
+    var menu = document.querySelector('.lang-menu');
+    menu.classList.toggle('open');
+  });
+
+  document.getElementById('theme-btn').addEventListener('click', function () {
+    var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('flashpilot-theme', next);
+  });
+
+  setLang(document.documentElement.lang === 'zh-CN' ? 'zh' : 'en');
+})();
+</script>
+</body>
+</html>

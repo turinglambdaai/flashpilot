@@ -3,10 +3,9 @@
 **Agent-native ECU flashing — UDS over CAN, DoIP and LIN, driven by declarative flash plans and built for coding agents.**
 The focused, license-free alternative to vFlash: one resident-free CLI, deterministic JSON, exit codes that never lie, and failure evidence that lets an agent self-diagnose.
 
-[![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
-**English** · [中文](README.zh-CN.md)
-[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+**English** · [中文](README.zh-CN.md) · [User guide](https://flashpilot.jrtx.site/guide.html)
 
 ## Why FlashPilot?
 
@@ -27,7 +26,18 @@ Not a CANoe clone: no vehicle-network simulation, no CAPL, no analysis-window co
 
 The next gates: UDS over LIN, DoIP Ethernet hardening against real ECUs, and a plan library.
 
+**Released**: v0.1.0 ships the agent-first CLI (`flash` / `verify` / `dtc` / `request` / `udid`) for Windows x64, Linux x64/arm64 and macOS arm64/x64 — zip + SHA-256 per platform plus a combined SHA256SUMS on the [Releases](https://github.com/turinglambdaai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
+
 ## Quick start
+
+Download a released CLI (no Racket needed), unpack, and flash the built-in simulated ECU — hardware-free:
+
+```bash
+unzip flashpilot-0.1.0-macos-arm64.zip -d flashpilot
+./flashpilot/bin/flashpilot flash examples/plan.sim.json
+```
+
+Or run from source:
 
 ```bash
 git clone https://github.com/turinglambdaai/flashpilot.git
@@ -36,10 +46,10 @@ raco pkg install --auto --name flashpilot --link racket
 racket app/cli.rkt flash examples/plan.sim.json
 ```
 
-The default transport is a built-in simulated ECU — the whole flash loop runs hardware-free:
+The default transport is a built-in simulated ECU — the whole flash loop runs hardware-free (real output):
 
 ```json
-{"ok":true,"bytes":300,"fingerprint":"…","steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}
+{"bytes":30,"error":null,"fingerprint":"144252e810505c9f","ok":true,"steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}
 ```
 
 Against a real ECU over DoIP:
@@ -79,7 +89,9 @@ Every command prints one JSON object — camelCase fields, stable names, bounded
 - `powerGuard` — polls the bench supply while programming; out-of-band current powers off and aborts.
 - `expectedFingerprint` — pins the image; mismatch is rejected before any driver call.
 
-Segments take inline hex, `.bin` files, or Intel HEX / S-record images (parsed into one segment per contiguous region). Seed-key algorithms beyond the built-ins plug in as external commands: `"keyDeriver": "command:./my-oem-algo"`.
+Segments take inline hex (`data`) or raw `.bin` files (`file`), resolved relative to the plan's directory. Intel HEX / S-record parsing ships in the image model; plan-level wiring for `.hex`/`.s19` files is coming. Seed-key algorithms beyond the built-ins plug in as external commands: `"keyDeriver": "command:./my-oem-algo"`.
+
+Full field reference and copy-pasteable examples: the [user guide](https://flashpilot.jrtx.site/guide.html).
 
 ## Testing
 

@@ -26,6 +26,7 @@
       <a href="#design" data-i18n="nav.design">设计原则</a>
       <a href="#start" data-i18n="nav.start">三步开始</a>
       <a href="#download" data-i18n="nav.download">下载</a>
+      <a href="guide.html" data-i18n="nav.guide">手册</a>
       <a href="https://github.com/turinglambdaai/flashpilot" data-i18n="nav.github">GitHub</a>
       <div class="lang-dropdown-wrapper">
         <button class="lang-btn" type="button" aria-label="Switch language">
@@ -136,10 +137,10 @@ raco pkg install --auto --name flashpilot --link racket</div>
   <section id="download" class="section alt">
     <h2 data-i18n="download-title">下载</h2>
     <div class="dl-grid">
-      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot/releases">
-        <h3>Windows（x64）/ Linux</h3>
-        <p data-i18n="dl-cli">CLI 安装包随首个发布交付，敬请期待。当前可从源码运行：clone 仓库、raco pkg install，一条命令空跑模拟 ECU。</p>
-        <span class="btn btn-primary" data-i18n="dl-watch">关注发布 →</span>
+      <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot/releases/latest">
+        <h3>Windows（x64）/ Linux / macOS</h3>
+        <p data-i18n="dl-cli">v0.1.0 已发布：五个平台架构的 CLI zip + SHA-256 校验，免硬件跑通模拟 ECU 全闭环——五分钟上手见手册。</p>
+        <span class="btn btn-primary" data-i18n="dl-watch">前往下载 →</span>
       </a>
       <a class="dl-card" href="https://github.com/turinglambdaai/flashpilot">
         <h3>原生宿主</h3>
@@ -151,10 +152,10 @@ raco pkg install --auto --name flashpilot --link racket</div>
         <p class="platform-row">
           <span class="chip ok">Windows</span>
           <span class="chip ok">Linux</span>
-          <span class="chip">macOS</span>
+          <span class="chip ok">macOS</span>
         </p>
         <p class="muted" data-i18n="dl-platforms-body">
-          现状：CLI 在 Windows / Linux 构建，模拟 ECU 全链路在 CI 硬件无关跑通；首个发布交付三平台安装包。这是开发者工具，不做移动端。
+          v0.1.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑。这是开发者工具，不做移动端。
         </p>
       </div>
     </div>
@@ -163,7 +164,7 @@ raco pkg install --auto --name flashpilot --link racket</div>
   <section class="section">
     <h2 data-i18n="roadmap-title">路线图</h2>
     <ul>
-      <li><strong>M1</strong> — <span data-i18n="rm1">首个发布：三平台安装包与文档</span></li>
+      <li><strong>M1</strong> — <span data-i18n="rm1">✅ 首个发布 v0.1.0 已交付：三平台 CLI zip 与手册</span></li>
       <li><strong>M2</strong> — <span data-i18n="rm2">UDS over LIN：LIN 传输与调度表</span></li>
       <li><strong>M3</strong> — <span data-i18n="rm3">DoIP 以太网对真实 ECU 加固</span></li>
       <li><strong>M4</strong> — <span data-i18n="rm4">烧录计划库：常见 OEM / 供应商场景开箱即用</span></li>
@@ -181,7 +182,7 @@ raco pkg install --auto --name flashpilot --link racket</div>
   var I18N = {
     en: {
       'nav.why': 'Why', 'nav.design': 'Design', 'nav.start': 'Get started',
-      'nav.download': 'Download', 'nav.github': 'GitHub',
+      'nav.download': 'Download', 'nav.guide': 'Manual', 'nav.github': 'GitHub',
       'kicker': 'license-free · no resident process · built for agents',
       'hero-title': 'An honest ECU flashing line for agents.',
       'hero-lede': "Automotive flashing today means vFlash: per-seat licenses, a Windows GUI, and a COM API agents cannot drive. In the AI era the authoring cost of flashing knowledge collapses — an agent can draft a flash plan from an OEM spec. The value left is the loop: generate a plan → verify its fingerprint → flash with guards → collect evidence on failure → regenerate. FlashPilot is built around that loop.",
@@ -210,13 +211,13 @@ raco pkg install --auto --name flashpilot --link racket</div>
       's3-title': 'Point it at a real ECU',
       's3-body': 'Switch the transport: SocketCAN (Linux), PEAK PCAN (Windows), or DoIP over Ethernet.',
       'download-title': 'Download',
-      'dl-cli': 'CLI packages ship with the first release — stay tuned. For now, run from source: clone, raco pkg install, and one command against the simulated ECU.',
+      'dl-cli': 'v0.1.0 is out: five platform/arch CLI zips with SHA-256 checksums, and the full simulated-ECU loop runs hardware-free — see the manual for a five-minute start.',
       'dl-host': 'Native hosts advance with the Rivet line; three-platform installers land with the first release.',
-      'dl-watch': 'Watch releases →', 'dl-progress': 'Follow progress →',
+      'dl-watch': 'Get v0.1.0 →', 'dl-progress': 'Follow progress →',
       'dl-platforms-title': 'Platforms',
-      'dl-platforms-body': 'Today: the CLI builds on Windows / Linux and the full simulated-ECU loop runs hardware-free in CI; the first release ships installers for all three desktops. A developer tool — no mobile.',
+      'dl-platforms-body': 'From v0.1.0 all three desktop platforms ship (Windows x64; Linux x64 / arm64; macOS arm64 / x64) and the simulated-ECU loop runs hardware-free. A developer tool — no mobile.',
       'roadmap-title': 'Roadmap',
-      'rm1': 'First release: three-platform installers and docs',
+      'rm1': '✅ First release shipped: v0.1.0 — three-platform CLI zips and the manual',
       'rm2': 'UDS over LIN: LIN transport and schedule tables',
       'rm3': 'DoIP Ethernet hardening against real ECUs',
       'rm4': 'Plan library: common OEM / supplier scenarios out of the box',
@@ -224,7 +225,7 @@ raco pkg install --auto --name flashpilot --link racket</div>
     },
     zh: {
       'nav.why': '为什么需要', 'nav.design': '设计原则', 'nav.start': '三步开始',
-      'nav.download': '下载', 'nav.github': 'GitHub',
+      'nav.download': '下载', 'nav.guide': '手册', 'nav.github': 'GitHub',
       'kicker': '免授权费 · 无常驻进程 · 为 agent 而生',
       'hero-title': '给 agent 一条诚实的 ECU 烧录线。',
       'hero-lede': '汽车刷写的现状是 vFlash：按席位收费、Windows GUI、agent 开不动的 COM API。AI 时代，烧录知识的编写成本坍塌了——agent 能照着 OEM 规格书起草烧录计划，剩下的价值在闭环：生成计划 → 校验指纹 → 带保护地烧录 → 收集失败证据 → 重新生成。FlashPilot 就是为这个闭环而生。',
@@ -253,13 +254,13 @@ raco pkg install --auto --name flashpilot --link racket</div>
       's3-title': '换上真车',
       's3-body': '改传输参数指向真实 ECU：SocketCAN（Linux）、PEAK PCAN（Windows）或 DoIP 以太网。',
       'download-title': '下载',
-      'dl-cli': 'CLI 安装包随首个发布交付，敬请期待。当前可从源码运行：clone 仓库、raco pkg install，一条命令空跑模拟 ECU。',
+      'dl-cli': 'v0.1.0 已发布：五个平台架构的 CLI zip + SHA-256 校验，免硬件跑通模拟 ECU 全闭环——五分钟上手见手册。',
       'dl-host': '原生壳随 Rivet 线推进，三平台安装包随首个发布一起交付。',
-      'dl-watch': '关注发布 →', 'dl-progress': '了解进展 →',
+      'dl-watch': '前往下载 →', 'dl-progress': '了解进展 →',
       'dl-platforms-title': '平台',
-      'dl-platforms-body': '现状：CLI 在 Windows / Linux 构建，模拟 ECU 全链路在 CI 硬件无关跑通；首个发布交付三平台安装包。这是开发者工具，不做移动端。',
+      'dl-platforms-body': 'v0.1.0 起三平台 CLI 均已发布（Windows x64；Linux x64 / arm64；macOS arm64 / x64），模拟 ECU 全链路免硬件可跑。这是开发者工具，不做移动端。',
       'roadmap-title': '路线图',
-      'rm1': '首个发布：三平台安装包与文档',
+      'rm1': '✅ 首个发布 v0.1.0 已交付：三平台 CLI zip 与手册',
       'rm2': 'UDS over LIN：LIN 传输与调度表',
       'rm3': 'DoIP 以太网对真实 ECU 加固',
       'rm4': '烧录计划库：常见 OEM / 供应商场景开箱即用',

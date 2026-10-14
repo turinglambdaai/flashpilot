@@ -3,9 +3,9 @@
 **Agent 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
 专注且免授权费的 vFlash 替代品：一个无常驻进程的 CLI、确定性 JSON、永不撒谎的退出码，以及让 agent 自我诊断的失败证据。
 
-[![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
-[English](README.md) · **中文**
+[English](README.md) · **中文** · [用户手册](https://flashpilot.jrtx.site/guide.html)
 
 ## 为什么做 FlashPilot？
 
@@ -26,7 +26,18 @@ FlashPilot 就是围绕这个闭环构建的。
 
 下一道门：LIN 上的 UDS、DoIP 以太网对真实 ECU 的加固，以及计划库。
 
+**已发布**：v0.1.0 交付 agent 优先的 CLI（`flash` / `verify` / `dtc` / `request` / `udid`），覆盖 Windows x64、Linux x64/arm64 与 macOS arm64/x64——每平台 zip + SHA-256，另有汇总 SHA256SUMS，见 [Releases](https://github.com/turinglambdaai/flashpilot/releases/latest)。双语用户手册：<https://flashpilot.jrtx.site/guide.html>。
+
 ## 快速开始
+
+下载已发布的 CLI（无需 Racket），解压即可对内置模拟 ECU 免硬件烧录：
+
+```bash
+unzip flashpilot-0.1.0-macos-arm64.zip -d flashpilot
+./flashpilot/bin/flashpilot flash examples/plan.sim.json
+```
+
+或从源码运行：
 
 ```bash
 git clone https://github.com/turinglambdaai/flashpilot.git
@@ -35,10 +46,10 @@ raco pkg install --auto --name flashpilot --link racket
 racket app/cli.rkt flash examples/plan.sim.json
 ```
 
-默认传输层是内置模拟 ECU——整条烧录闭环无需硬件即可运行：
+默认传输层是内置模拟 ECU——整条烧录闭环无需硬件即可运行（真实输出）：
 
 ```json
-{"ok":true,"bytes":300,"fingerprint":"…","steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}
+{"bytes":30,"error":null,"fingerprint":"144252e810505c9f","ok":true,"steps":["diagnostic-session","security-access","erase","download","verify","ecu-reset"]}
 ```
 
 对真实 ECU 走 DoIP：
@@ -78,7 +89,9 @@ racket app/cli.rkt flash plan.doip.json --transport doip --host 192.168.0.1
 - `powerGuard` —— 编程期间轮询台架电源；电流越界即断电中止。
 - `expectedFingerprint` —— 锁定镜像；不匹配在任何驱动调用之前就被拒绝。
 
-段支持 inline hex、`.bin` 文件或 Intel HEX / S-record 镜像（按连续区域解析为段）。内置算法之外的 seed-key 算法以外部命令接入：`"keyDeriver": "command:./my-oem-algo"`。
+段支持内联十六进制（`data`）或原始 `.bin` 文件（`file`），相对计划文件目录解析。Intel HEX / S-record 解析已在镜像模型层就绪；计划段直接引用 `.hex`/`.s19` 的接线在后续版本开放。内置算法之外的 seed-key 算法以外部命令接入：`"keyDeriver": "command:./my-oem-algo"`。
+
+字段详解与可复制粘贴的示例见[用户手册](https://flashpilot.jrtx.site/guide.html)。
 
 ## 测试
 

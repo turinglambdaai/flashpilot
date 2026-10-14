@@ -1,0 +1,203 @@
+name: release
+
+# Tag-triggered CLI release: one zip + .sha256 per platform/arch plus a
+# combined SHA256SUMS, published as the Latest GitHub Release. The GUI shells
+# are a debug cockpit, not a release artifact — CLI only, honestly.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Verify release metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version must be single-sourced (tag = rktd = info.rkt)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          grep -q "^## \[${VERSION}\]" CHANGELOG.md
+          grep -q "(version . \"${VERSION}\")" rivet.rktd
+          grep -q "(define version \"${VERSION}\")" racket/info.rkt
+
+  build:
+    name: Build (${{ matrix.platform }}-${{ matrix.arch }})
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            racket-arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            racket-arch: x64
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            racket-arch: arm64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            racket-arch: arm64
+          - os: macos-15-intel
+            platform: macos
+            arch: x64
+            racket-arch: x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Racket (full CS distribution)
+        uses: Bogdanp/setup-racket@v1.15
+        with:
+          version: '9.3'
+          architecture: ${{ matrix.racket-arch }}
+          distribution: full
+          variant: CS
+
+      - name: Install package
+        run: raco pkg install --auto --name flashpilot --link racket
+
+      - name: Compile CLI
+        run: raco make app/cli.rkt
+
+      - name: Build executable
+        shell: bash
+        run: |
+          mkdir -p build
+          case '${{ runner.os }}' in
+            Windows) raco exe -o build/flashpilot.exe app/cli.rkt ;;
+            *)       raco exe -o build/flashpilot app/cli.rkt ;;
+          esac
+          # raco exe writes the binary read-only; distribute patches its copy
+          chmod u+w build/flashpilot*
+
+      - name: Bundle runtime
+        shell: bash
+        run: |
+          case '${{ runner.os }}' in
+            Windows) raco distribute stage build/flashpilot.exe ;;
+            *)       raco distribute stage build/flashpilot ;;
+          esac
+          # ship the sample plan + firmware so the archive runs its own
+          # simulated-ECU smoke right after unzip — no repo checkout needed
+          cp -R examples stage/examples
+          ls -la stage
+
+      - name: Smoke the bundled binary (simulated ECU, hardware-free)
+        shell: bash
+        run: |
+          EXE=stage/bin/flashpilot
+          [ '${{ runner.os }}' = 'Windows' ] && EXE=stage/flashpilot.exe
+          "$EXE" --help
+          "$EXE" verify examples/plan.sim.json
+          "$EXE" flash examples/plan.sim.json
+          # the archive carries examples/ — it must be in the staged copy
+          test -f stage/examples/plan.sim.json
+          # exit codes never lie: a bogus command must exit 2
+          set +e
+          "$EXE" bogus >/dev/null 2>&1
+          code=$?
+          set -e
+          test "$code" -eq 2
+
+      - name: Package (zip)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ASSET="flashpilot-${VERSION}-${{ matrix.platform }}-${{ matrix.arch }}"
+          (cd stage && zip -r "../${ASSET}.zip" .)
+          ls -la "${ASSET}.zip"
+
+      - name: Package (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $asset = "flashpilot-$version-windows-x64"
+          Compress-Archive -Path stage/* -DestinationPath "$asset.zip"
+
+      - name: Checksum
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ASSET="flashpilot-${VERSION}-${{ matrix.platform }}-${{ matrix.arch }}"
+          sha256sum "${ASSET}.zip" > "${ASSET}.zip.sha256"
+          cat "${ASSET}.zip.sha256"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            flashpilot-*.zip
+            flashpilot-*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Build SHA256SUMS and verify
+        run: |
+          cd artifacts
+          sha256sum flashpilot-*.zip > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          ls -la
+
+      - name: Build release body (changelog section + checksums)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # heading looks like "## [0.1.0] - 2026-10-14"; match the bracketed prefix
+          awk -v ver="$VERSION" '
+            $0 ~ ("^## \\[" ver "\\]") {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > release-body.md
+          if [ ! -s release-body.md ]; then
+            echo "See CHANGELOG.md for details." > release-body.md
+          fi
+          {
+            echo ""
+            echo "Standalone CLI archives — no Racket installation required. Unix archives unpack to \`bin/flashpilot\` + \`lib/\`; Windows to \`flashpilot.exe\` + runtime."
+            echo ""
+            echo "Updates are manual: download the new archive and replace your install (no auto-updater in v0.1.0)."
+            echo ""
+            echo "### Checksums (SHA-256)"
+            echo '```'
+            cat artifacts/SHA256SUMS
+            echo '```'
+          } >> release-body.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/flashpilot-*.zip
+            artifacts/flashpilot-*.zip.sha256
+            artifacts/SHA256SUMS
+          body_path: release-body.md
+          generate_release_notes: true
