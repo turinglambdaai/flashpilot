@@ -13,22 +13,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            racket-arch: x64
+          - os: windows-latest
+            racket-arch: x64
+          - os: macos-latest
+            racket-arch: arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - name: Setup Racket
         uses: Bogdanp/setup-racket@v1.15
         with:
-          architecture: x64
+          architecture: ${{ matrix.racket-arch }}
           distribution: full
           variant: CS
           version: '9.3'
       - name: Install package
         run: raco pkg install --auto --name flashpilot --link racket
-      - name: Install Rivet (catalog)
-        run: raco pkg install --auto --no-docs rivet
+      - name: Install Rivet (pinned to the release engine version)
+        run: raco pkg install --auto --no-docs 'https://github.com/turinglambdaai/rivet.git#v0.11.0'
       - name: Compile Rivet backend
         run: raco make app/backend.rkt
+      - name: Compile CLI
+        run: raco make app/cli.rkt
       - name: Test (UDS/ISO-TP/flash plans/DTC/providers)
         run: raco test racket/flashpilot
+      - name: Smoke the CLI (simulated ECU, hardware-free)
+        shell: bash
+        run: |
+          racket app/cli.rkt verify examples/plan.sim.json
+          racket app/cli.rkt flash examples/plan.sim.json
