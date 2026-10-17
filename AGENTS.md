@@ -30,5 +30,5 @@ raco test racket/flashpilot
 ## 仓库特定规矩
 
 - rivet 以 pin（`v0.11.0`）消费，禁止直接引用源码；升级 pin 须过全量 CI。
-- 与 BenchPilot 是不同产品、并行推进，勿混淆两边 issue/PR。
+- BenchPilot（ECU 试验台运行时）已于 2026-10-17 删除，其历史 issue/PR 与本产品无关，勿混淆。
 - 站点 `site/` 为生成+手维护混合，改 guide 先改 `docs/` 再按 pages.yml 流程同步。
