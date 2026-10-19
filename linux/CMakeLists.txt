@@ -62,6 +62,7 @@ add_executable(RivetHost
   "${RIVET_ROOT}/platform/linux/system/tray.cpp"
   "${RIVET_ROOT}/platform/linux/theme/theme.cpp"
   "${RIVET_ROOT}/runtime/src/protocol.cpp"
+  "${RIVET_ROOT}/runtime/src/utf8.cpp"
 )
 
 if(LIBSECRET_FOUND)

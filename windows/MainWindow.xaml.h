@@ -8,17 +8,25 @@ namespace winrt::RivetHost::implementation {
 struct MainWindow : MainWindowT<MainWindow> {
   MainWindow();
 
-  void Increment_Click(winrt::Windows::Foundation::IInspectable const& sender,
-                       Microsoft::UI::Xaml::RoutedEventArgs const& args);
+  void RefreshStatus_Click(winrt::Windows::Foundation::IInspectable const&,
+                           Microsoft::UI::Xaml::RoutedEventArgs const&);
+  void Validate_Click(winrt::Windows::Foundation::IInspectable const&,
+                      Microsoft::UI::Xaml::RoutedEventArgs const&);
+  void VerifyPlan_Click(winrt::Windows::Foundation::IInspectable const&,
+                        Microsoft::UI::Xaml::RoutedEventArgs const&);
+  void ReadDtc_Click(winrt::Windows::Foundation::IInspectable const&,
+                     Microsoft::UI::Xaml::RoutedEventArgs const&);
 
  private:
   winrt::fire_and_forget InitializeBackendAsync();
-  void IncrementAsync();
+  void RefreshStatusAsync();
+  void ValidateAsync();
+  void VerifyPlanAsync();
+  void ReadDtcAsync();
   void SetReadyUi();
   void SetErrorUi(std::string const& message);
 
   std::shared_ptr<rivet::windows::Backend> backend_;
-  std::atomic<std::int64_t> count_{0};
 };
 
 }  // namespace winrt::RivetHost::implementation

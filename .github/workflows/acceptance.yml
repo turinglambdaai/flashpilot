@@ -1,0 +1,118 @@
+name: Product Acceptance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RIVET_PIN: de1fb8997539d34ba029064f500f6903b955b5a7
+
+jobs:
+  windows:
+    name: Windows packaged WinUI acceptance
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Bogdanp/setup-racket@v1.15
+        with:
+          architecture: x64
+          distribution: full
+          variant: CS
+          version: stable
+      - name: Install local package and pinned Rivet
+        shell: pwsh
+        run: |
+          raco pkg install --auto --name flashpilot --link racket
+          raco pkg install --auto --no-docs "https://github.com/turinglambdaai/rivet.git#$env:RIVET_PIN"
+      - name: Run executable acceptance contract
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .rivet\acceptance | Out-Null
+          $report = & raco rivet acceptance --json
+          $status = $LASTEXITCODE
+          $report | Tee-Object -FilePath .rivet\acceptance\report.json
+          exit $status
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashpilot-acceptance-windows
+          path: .rivet/acceptance
+          if-no-files-found: warn
+
+  macos:
+    name: macOS packaged SwiftUI acceptance (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-15, racket-arch: arm64 }
+          - { arch: x64, runner: macos-15-intel, racket-arch: x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Bogdanp/setup-racket@v1.15
+        with:
+          architecture: ${{ matrix.racket-arch }}
+          distribution: full
+          variant: CS
+          version: stable
+      - name: Install local package and pinned Rivet
+        run: |
+          raco pkg install --auto --name flashpilot --link racket
+          raco pkg install --auto --no-docs "https://github.com/turinglambdaai/rivet.git#${RIVET_PIN}"
+      - name: Run executable acceptance contract
+        run: |
+          set -euo pipefail
+          mkdir -p .rivet/acceptance
+          raco rivet acceptance --json | tee .rivet/acceptance/report.json
+      - name: Upload macOS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashpilot-acceptance-macos-${{ matrix.arch }}
+          path: .rivet/acceptance
+          if-no-files-found: warn
+
+  linux:
+    name: Linux packaged GTK4 acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up embeddable Racket CS
+        uses: turinglambdaai/rivet/.github/actions/setup-embed-racket@de1fb8997539d34ba029064f500f6903b955b5a7
+      - name: Install native dependencies, local package, and pinned Rivet
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes at-spi2-core dbus-x11 cmake ninja-build pkg-config \
+            libgtk-4-dev libsecret-1-dev liblz4-dev zlib1g-dev libncurses-dev \
+            python3-pyatspi weston
+          raco pkg install --auto --name flashpilot --link racket
+          raco pkg install --auto --no-docs "https://github.com/turinglambdaai/rivet.git#${RIVET_PIN}"
+      - name: Run executable acceptance contract
+        run: |
+          set -euo pipefail
+          mkdir -p .rivet/acceptance
+          dbus-run-session -- bash -c \
+            'set -euo pipefail; raco rivet acceptance --json | tee .rivet/acceptance/report.json'
+      - name: Upload Linux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashpilot-acceptance-linux
+          path: .rivet/acceptance
+          if-no-files-found: warn

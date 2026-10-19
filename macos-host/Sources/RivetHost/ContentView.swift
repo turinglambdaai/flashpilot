@@ -15,6 +15,7 @@ struct ContentView: View {
                     row("Validate", model.validateResult)
                     Button("Validate bench") { model.validate() }
                         .disabled(!model.ready)
+                        .accessibilityIdentifier("ValidateBenchButton")
                 }
                 Section("Plan") {
                     row("Verify plan", model.planResult)

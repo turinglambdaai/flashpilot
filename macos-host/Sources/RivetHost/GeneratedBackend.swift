@@ -10,7 +10,7 @@ public enum RivetGeneratedConfig {
     public static let version = "0.1.0"
     public static let build: Int64 = 1
     public static let identifier = "site.jrtx.flashpilot"
-    public static let releaseChannel = "dev"
+    public static let releaseChannel = "stable"
 }
 
 private func encode_String(_ v: String) -> RivetValue { .string(v) }
@@ -35,30 +35,30 @@ public struct RivetAPI: Sendable {
     public init(client: RivetClient) { self.client = client }
 
     public func bench_status() async throws -> String {
-        let result = try await client.call("bench-status", arguments: [])
-        return try decode_String(result)
+        let rivetResult = try await client.call("bench-status", arguments: [])
+        return try decode_String(rivetResult)
     }
     public func bench_validate() async throws -> String {
-        let result = try await client.call("bench-validate", arguments: [])
-        return try decode_String(result)
+        let rivetResult = try await client.call("bench-validate", arguments: [])
+        return try decode_String(rivetResult)
     }
     public func dtc_read() async throws -> String {
-        let result = try await client.call("dtc-read", arguments: [])
-        return try decode_String(result)
+        let rivetResult = try await client.call("dtc-read", arguments: [])
+        return try decode_String(rivetResult)
     }
     public func verify_plan(planPath: String) async throws -> String {
-        let result = try await client.call("verify-plan", arguments: [encode_String(planPath)])
-        return try decode_String(result)
+        let rivetResult = try await client.call("verify-plan", arguments: [encode_String(planPath)])
+        return try decode_String(rivetResult)
     }
 
     // Shared state
-    public func getFlash_count() async throws -> Int64 {
-        let result = try await client.getState("flash-count")
-        return try decode_Int64(result)
+    public func get_flash_count() async throws -> Int64 {
+        let rivetResult = try await client.getState("flash-count")
+        return try decode_Int64(rivetResult)
     }
     @discardableResult
-    public func setFlash_count(_ value: Int64) async throws -> Int64 {
-        let result = try await client.setState("flash-count", value: encode_Int64(value))
-        return try decode_Int64(result)
+    public func set_flash_count(_ value: Int64) async throws -> Int64 {
+        let rivetResult = try await client.setState("flash-count", value: encode_Int64(value))
+        return try decode_Int64(rivetResult)
     }
 }
