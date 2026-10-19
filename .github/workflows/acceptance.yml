@@ -15,8 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RIVET_PIN: de1fb8997539d34ba029064f500f6903b955b5a7
-
+  RIVET_PIN: v0.12.0
 jobs:
   windows:
     name: Windows packaged WinUI acceptance
@@ -93,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up embeddable Racket CS
-        uses: turinglambdaai/rivet/.github/actions/setup-embed-racket@de1fb8997539d34ba029064f500f6903b955b5a7
+        uses: turinglambdaai/rivet/.github/actions/setup-embed-racket@v0.12.0
       - name: Install native dependencies, local package, and pinned Rivet
         run: |
           set -euo pipefail
