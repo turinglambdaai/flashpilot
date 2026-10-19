@@ -101,15 +101,18 @@ def main():
         window = wait_for(
             "FlashPilot frame", lambda: next((n for n in walk(application) if role(n) == "frame"), None)
         )
+        wait_for(
+            "embedded backend readiness",
+            lambda: contains(window, "Embedded Racket CS is ready"),
+        )
         validate = wait_for(
-            "enabled Validate bench button",
+            "Validate bench button",
             lambda: next(
                 (
                     node
                     for node in walk(window)
                     if (node.name or "") == "Validate bench"
                     and role(node) == "push button"
-                    and enabled(node)
                 ),
                 None,
             ),
