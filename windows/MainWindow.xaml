@@ -4,34 +4,45 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid Padding="32">
-        <StackPanel
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Spacing="16"
-            Width="320">
-            <TextBlock
-                Text="Rivet"
-                FontSize="32"
-                FontWeight="SemiBold" />
-            <TextBlock
-                Text="Racket + WinUI 3"
-                Opacity="0.65" />
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel HorizontalAlignment="Center" Spacing="16" Width="560">
+            <TextBlock Text="FlashPilot" FontSize="32" FontWeight="SemiBold" />
+            <TextBlock Text="Agent-native ECU flashing cockpit" Opacity="0.65" />
             <InfoBar
                 x:Name="StatusBar"
+                AutomationProperties.AutomationId="BackendStatus"
                 IsOpen="True"
                 IsClosable="False"
                 Severity="Informational"
                 Message="Starting embedded Racket CS…" />
-            <TextBlock
-                x:Name="CountText"
-                Text="Count: 0"
-                FontSize="24" />
-            <Button
-                x:Name="IncrementButton"
-                Content="Increment in Racket"
-                IsEnabled="False"
-                HorizontalAlignment="Stretch"
-                Click="Increment_Click" />
+
+            <TextBlock Text="Bench" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock x:Name="BenchStatusText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="BenchStatusResult" />
+            <Button x:Name="RefreshStatusButton" Content="Refresh status" IsEnabled="False"
+                    HorizontalAlignment="Stretch" Click="RefreshStatus_Click" />
+
+            <TextBlock Text="Readiness" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock x:Name="ValidateText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="ValidateResult" />
+            <Button x:Name="ValidateButton" Content="Validate bench" IsEnabled="False"
+                    AutomationProperties.AutomationId="ValidateBenchButton"
+                    HorizontalAlignment="Stretch" Click="Validate_Click" />
+
+            <TextBlock Text="Plan" FontSize="18" FontWeight="SemiBold" />
+            <TextBox x:Name="PlanPathBox" Header="Plan path" Text="examples/plan.sim.json"
+                     AutomationProperties.AutomationId="PlanPath" />
+            <TextBlock x:Name="PlanText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="PlanResult" />
+            <Button x:Name="VerifyPlanButton" Content="Verify plan" IsEnabled="False"
+                    HorizontalAlignment="Stretch" Click="VerifyPlan_Click" />
+
+            <TextBlock Text="Diagnostics" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock x:Name="DtcText" Text="—" TextWrapping="Wrap"
+                       FontFamily="Consolas" AutomationProperties.AutomationId="DtcResult" />
+            <Button x:Name="ReadDtcButton" Content="Read DTCs" IsEnabled="False"
+                    HorizontalAlignment="Stretch" Click="ReadDtc_Click" />
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>

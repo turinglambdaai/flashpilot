@@ -15,20 +15,23 @@ FlashPilot——agent 原生的 ECU 烧录工具（UDS over CAN/DoIP/LIN，声�
 ```bash
 # 引擎与入口（CI 同款）
 raco pkg install --auto --name flashpilot --link racket
-raco pkg install --auto --no-docs 'https://github.com/turinglambdaai/rivet.git#v0.11.0'
+raco pkg install --auto --no-docs 'https://github.com/turinglambdaai/rivet.git#de1fb8997539d34ba029064f500f6903b955b5a7'
 raco make app/backend.rkt
 raco make app/cli.rkt
 raco test racket/flashpilot
+raco rivet acceptance
 ```
 
 ## 验证与发版
 
 - CI（`ci.yml`）：多平台 matrix 装 rivet pin → raco make 入口 → raco test 引擎。
+- 产品验收（`acceptance.yml`）：三平台构建并打包原生 GUI，以系统无障碍接口点击“Validate bench”，验证 RVT1、模拟 ECU 与原生结果展示的完整链路。
 - 站点（`pages.yml`）：`docs/guide.html` 拷入 `site/` 后部署 GitHub Pages。
 - 发版（`release.yml`）：tag `v*` 触发多平台产物构建；CHANGELOG 按 Keep a Changelog 格式随发版更新。发版前产物必须本机实测（家族教训）。
 
 ## 仓库特定规矩
 
-- rivet 以 pin（`v0.11.0`）消费，禁止直接引用源码；升级 pin 须过全量 CI。
+- rivet 以固定提交消费，禁止漂移到 tag/main；升级 pin 须同时更新 CI、验收和本文件，并通过三平台打包交互。
+- 不得以 Racket/CLI 测试替代 GUI 交付证明；Windows、macOS、Linux 宿主都必须由 `raco rivet acceptance` 实际构建、打包并操作。
 - BenchPilot（ECU 试验台运行时）已于 2026-10-17 删除，其历史 issue/PR 与本产品无关，勿混淆。
 - 站点 `site/` 为生成+手维护混合，改 guide 先改 `docs/` 再按 pages.yml 流程同步。
