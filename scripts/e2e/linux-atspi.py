@@ -95,25 +95,33 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
 
-    application = wait_for("FlashPilot application", find_application)
-    window = wait_for(
-        "FlashPilot frame", lambda: next((n for n in walk(application) if role(n) == "frame"), None)
-    )
-    validate = wait_for(
-        "enabled Validate bench button",
-        lambda: next(
-            (
-                node
-                for node in walk(window)
-                if (node.name or "") == "Validate bench"
-                and role(node) == "push button"
-                and enabled(node)
+    application = None
+    try:
+        application = wait_for("FlashPilot application", find_application)
+        window = wait_for(
+            "FlashPilot frame", lambda: next((n for n in walk(application) if role(n) == "frame"), None)
+        )
+        validate = wait_for(
+            "enabled Validate bench button",
+            lambda: next(
+                (
+                    node
+                    for node in walk(window)
+                    if (node.name or "") == "Validate bench"
+                    and role(node) == "push button"
+                    and enabled(node)
+                ),
+                None,
             ),
-            None,
-        ),
-    )
-    press(validate)
-    wait_for("validation result from embedded backend", lambda: contains(window, '"ok":true'))
+        )
+        press(validate)
+        wait_for("validation result from embedded backend", lambda: contains(window, '"ok":true'))
+    except Exception:
+        if application is not None:
+            (args.output / "accessibility-failure.json").write_text(
+                json.dumps(snapshot(application), ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        raise
 
     (args.output / "accessibility.json").write_text(
         json.dumps(snapshot(application), ensure_ascii=False, indent=2), encoding="utf-8"

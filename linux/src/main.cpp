@@ -133,8 +133,10 @@ int on_backend_finished(gpointer) {
   }
   g_state.backend = std::move(backend);
   g_state.api = std::make_unique<rivet_app::API>(*g_state.backend);
+  set_status("Embedded Racket CS is ready");
+  set_controls_sensitive(true);
   (void)g_state.api->bench_status_async([](rivet_app::Result<std::string> result) {
-    deliver_string(std::move(result), g_state.bench, nullptr, true);
+    deliver_string(std::move(result), g_state.bench);
   });
   return G_SOURCE_REMOVE;
 }
