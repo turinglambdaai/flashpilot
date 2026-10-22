@@ -38,6 +38,8 @@ jobs:
         run: raco make app/backend.rkt
       - name: Compile CLI
         run: raco make app/cli.rkt
+      - name: Compile MCP server
+        run: raco make app/mcp.rkt
       - name: Test (UDS/ISO-TP/flash plans/DTC/providers)
         run: raco test racket/flashpilot
       - name: Smoke the CLI (simulated ECU, hardware-free)
@@ -45,3 +47,5 @@ jobs:
         run: |
           racket app/cli.rkt verify examples/plan.sim.json
           racket app/cli.rkt flash examples/plan.sim.json
+          racket app/cli.rkt validate examples/plan.sim.json
+          racket scripts/mcp-smoke.rkt

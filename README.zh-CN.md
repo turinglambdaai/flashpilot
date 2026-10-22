@@ -44,7 +44,18 @@ git clone https://github.com/turinglambdaai/flashpilot.git
 cd flashpilot
 raco pkg install --auto --name flashpilot --link racket
 racket app/cli.rkt flash examples/plan.sim.json
+racket app/cli.rkt validate examples/plan.sim.json
+racket scripts/mcp-smoke.rkt   # agent 面：stdio 上的 MCP
 ```
+
+把 OEM 的 ODX/PDX 导入为可编辑计划（支持的子集如实上报——没转换的都进 `issues`）：
+
+```bash
+racket app/cli.rkt odx-import oem-flash.pdx > plan.json
+racket app/cli.rkt validate plan.json
+```
+
+编码 agent 可以走 MCP 驱动整个闭环（`racket app/mcp.rkt`）：`flashpilot_validate`、`flashpilot_flash`、`flashpilot_request`、`flashpilot_udid`、`flashpilot_odx_import`。
 
 默认传输层是内置模拟 ECU——整条烧录闭环无需硬件即可运行（真实输出）：
 

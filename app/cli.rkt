@@ -14,7 +14,9 @@
          (only-in flashpilot/diagnostics/flash/engine exn:fail:flash?)
          flashpilot/diagnostics/channels/sim-uds-channel
          flashpilot/diagnostics/doip/doip
+         flashpilot/diagnostics/flash/odx
          flashpilot/diagnostics/flash/plans
+         flashpilot/diagnostics/flash/validation
          flashpilot/diagnostics/uds/protocol)
 
 ;; ----------------------------------------------------------------------------
@@ -96,6 +98,8 @@
     "\n"
     "Usage:\n"
     "  flashpilot flash <plan.json>          run a declarative flash plan\n"
+    "  flashpilot validate <plan.json>       lint a plan (overlap, sizes, gaps)\n"
+    "  flashpilot odx-import <file.odx|.pdx> import ODX into a plan (subset)\n"
     "  flashpilot verify <plan.json>         plan + fingerprint checks only\n"
     "  flashpilot dtc [read|clear]           diagnostic trouble codes\n"
     "  flashpilot request <hex>              one raw UDS request\n"
@@ -150,6 +154,38 @@
                                     (uds-flash-result-steps result))
                         'error (or (uds-flash-result-error result) 'null)))
   (if (uds-flash-result-ok result) 0 1))
+
+;; validate: load (with file-backed segments resolved) and lint. Runs the
+;; same loading path as flash so what an agent validates is what flashes.
+(define (cmd-validate args)
+  (define plan-path
+    (or (arg-positional args 0) (fail "validation" "Missing plan path." 2)))
+  (define-values (hardening plan*) (load-plan-segments plan-path))
+  (define issues (plan-validation-issues plan*))
+  (define errors (plan-blocking-errors issues))
+  (define fingerprint (flash-plan-fingerprint (uds-flash-plan-segments plan*)))
+  (print-result
+   (hasheq 'ok (null? errors)
+           'file plan-path
+           'fingerprint fingerprint
+           'valid (null? errors)
+           'segments (length (uds-flash-plan-segments plan*))
+           'issues (plan-issues->json issues)))
+  (if (null? errors) 0 1))
+
+;; odx-import: ODX/PDX -> plan JSON. The subset is honest: everything not
+;; converted lands in `issues`, never silently dropped. Output is the plan
+;; document an agent edits further and passes to `validate` / `flash`.
+(define (cmd-odx-import args)
+  (define path
+    (or (arg-positional args 0) (fail "validation" "Missing ODX/PDX path." 2)))
+  (unless (file-exists? path)
+    (fail "validation" (format "ODX file not found: ~a" path) 2))
+  (define result (odx-import-file path))
+  (print-result (hasheq 'ok #t
+                        'plan (hash-ref result 'plan)
+                        'issues (hash-ref result 'issues)))
+  0)
 
 (define (cmd-verify args)
   (define plan-path
@@ -251,6 +287,8 @@
          (set! channel (make-channel args))
          (case command
            [(flash) (cmd-flash args)]
+           [(validate) (cmd-validate args)]
+           [(odx-import odx) (cmd-odx-import args)]
            [(verify) (cmd-verify args)]
            [(dtc) (cmd-dtc args)]
            [(request) (cmd-request args)]

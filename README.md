@@ -14,8 +14,9 @@ Automotive flashing today means vFlash: expensive per-seat licenses, a Windows G
 FlashPilot is built around that loop.
 
 - **Declarative flash plans** — one JSON document per ECU: segments (inline, BIN, Intel HEX, S-record), session, security access with pluggable key providers, erase/download/verify routines, timings, recovery strategy, power guard, expected fingerprint.
+- **ODX import + plan lint** — import the flash subset of ASAM ODX (`.odx`/`.pdx`: MEMORY-SEGMENT ranges, inline DATA, DATAFILE references) into a plan with honest reporting of everything not converted; lint plans for overlapping segments, empty ranges and gaps before any driver call.
 - **Real transports** — SocketCAN (Linux), PEAK PCAN (Windows), DoIP (Ethernet). ISO-TP (ISO 15765-2) underneath; LIN planned.
-- **Agent-first CLI** — deterministic JSON output, exit codes that never lie, and failure evidence (bounded, fingerprinted, audited) so an agent can diagnose and retry without a human opening a vendor tool.
+- **Agent-first CLI and MCP server** — deterministic JSON output, exit codes that never lie, and failure evidence (bounded, fingerprinted, audited) so an agent can diagnose and retry without a human opening a vendor tool. The same engine also speaks MCP over stdio: `validate`, `flash`, `request`, `udid` and ODX import as agent tools.
 - **Safety by default** — plans validate expected fingerprints before any driver call; in-programming power guards abort on out-of-band current; destructive plans say so.
 
 Not a CANoe clone: no vehicle-network simulation, no CAPL, no analysis-window collection. One loop done honestly.
@@ -44,7 +45,21 @@ git clone https://github.com/turinglambdaai/flashpilot.git
 cd flashpilot
 raco pkg install --auto --name flashpilot --link racket
 racket app/cli.rkt flash examples/plan.sim.json
+racket app/cli.rkt validate examples/plan.sim.json
+racket scripts/mcp-smoke.rkt   # agent surface: MCP over stdio
 ```
+
+Import an OEM ODX/PDX into an editable plan (the supported subset is
+reported honestly — anything not converted lands in `issues`):
+
+```bash
+racket app/cli.rkt odx-import oem-flash.pdx > plan.json
+racket app/cli.rkt validate plan.json
+```
+
+Coding agents can drive the whole loop over MCP
+(`racket app/mcp.rkt`): `flashpilot_validate`, `flashpilot_flash`,
+`flashpilot_request`, `flashpilot_udid`, `flashpilot_odx_import`.
 
 The default transport is a built-in simulated ECU — the whole flash loop runs hardware-free (real output):
 

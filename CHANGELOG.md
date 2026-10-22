@@ -3,6 +3,24 @@
 All notable changes to FlashPilot are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is SemVer.
 
+## [Unreleased]
+
+### Added
+
+- **ODX import (subset)** — `odx-import` command plus
+  `flashpilot/diagnostics/flash/odx`: `.odx`/`.odx-f`/`.pdx` into flash
+  plans (MEMORY-SEGMENT ranges, inline base64 DATA, DATAFILE references).
+  Everything outside the subset is reported in `issues`, never dropped.
+  CDD/VFD remain out of scope by design.
+- **Plan validation lint** — `validate` command plus
+  `flashpilot/diagnostics/flash/validation`: segment overlap (error),
+  empty segments (warning), gaps (warning), missing data/file (error);
+  `flash` refuses plans with validation errors.
+- **MCP server** — `app/mcp.rkt`: stdio JSON-RPC 2.0 exposing
+  `flashpilot_validate`, `flashpilot_flash`, `flashpilot_request`,
+  `flashpilot_udid` and `flashpilot_odx_import` to coding agents;
+  `scripts/mcp-smoke.rkt` gates the surface in CI.
+
 ## [0.1.0] - 2026-10-14
 
 First release. CLI-first, three platforms: the flashing core, a declarative
