@@ -1,41 +1,39 @@
-# FlashPilot 产品与收费方案
+# FlashPilot product and pricing plan
 
-## 首发与执行边界
+**English** · [简体中文](PRICING.zh-CN.md)
 
-- 本方案版本 `2026-10-v2`。用户确认所有产品仍在开发、没有实际用户；本文件替代此前冲突的定价/早鸟/Pro 设想，不存在需要迁移的现有客户群。**价格是首发目标，不表示已经开卖或已完成相应功能。**
-- 只发布已交付平台的权益；新计划不改变已经发布源码的 LICENSE。开源源码的使用/修改/再分发权与官方商品、更新和服务分别说明。
-- 修复安全漏洞、读取/备份/导出自己的数据不以再次购买作为条件。模型 key、支付渠道密钥和签发私钥各有边界，不在宿主代码里直接收款或签发。
+## Launch status and implementation boundaries
 
-## 决策
+- Policy version: `2026-10-v2`, 2026-10-23. The owner confirmed that every product is still in development and has no actual users. This document replaces conflicting previous pricing, early-bird and Pro proposals; there is no existing customer cohort to migrate. **Prices are launch targets, not live offers or claims that the listed features are implemented.**
+- Entitlements cover delivered platforms only. New commercial plans do not change the LICENSE of released source. Source use, modification and redistribution rights are separate from official products, updates and services.
+- Security fixes and reading, backing up or exporting your own data must not require another purchase. BYOK keys, payment-provider secrets and issuer private keys have different owners. Native hosts do not collect payment or issue credentials directly.
 
-**免费引擎 + 已验证工程发行版买断**
+## Decision
 
-首发目标：**单人 ¥1,499 / US$219；5 席 ¥5,999 / US$879；单席更新 ¥599 / US$89，5 席更新 ¥2,399 / US$359**。人民币和美元是分别设定的地区目标价格，不是实时汇率换算。
+**Free engine with a purchase for a validated engineering distribution**
 
-引擎免费利于 agent 生态，付费差异应落在真实硬件验证与问题闭环；不把未验证硬件支持当成现成许可证卖。
+Launch target: **Individual: ¥1,499 / US$219; 5 named seats: ¥5,999 / US$879. Optional 12-month update renewal: ¥599 / US$89 per individual, or ¥2,399 / US$359 for 5 seats**. CNY and USD are independently set regional targets, not a live exchange-rate conversion.
 
-## 免费与付费边界
+A free engine helps the agent ecosystem. Paid differentiation should be real hardware qualification and failure recovery, not an entitlement sold for unverified hardware support.
 
-免费 / 评估：当前 AGPL 引擎、CLI、MCP、现有传输和模拟 ECU 全部继续免费，包括内部生产、CI、agent 自动化；不按刷写次数收费，不拿基础安全校验作付费墙。
+## Free and paid scope
 
-付费：官方验证发行版、明确版本的适配器/参考 ECU 组合、可复现刷写与恢复报告、经验证的方案包及对应更新支持；收费针对官方验证资产与服务，不能限制已授予的 AGPL 权利。
+Free / evaluation: The current AGPL engine, CLI, MCP, existing transports and simulated ECU remain free, including internal production, CI and agent automation. No per-flash charge and no paywall around basic safety checks.
 
-## 买断、试用与更新
+Paid: An officially validated distribution, specific versioned adapter/reference-ECU combinations, reproducible flashing and recovery reports, validated plan assets and their updates/support. Payment is for official validation assets and services; it cannot restrict AGPL rights already granted.
 
-首购包含 12 个月新版本资格；到期后，更新窗内已获得的版本继续使用。续购自 `max(支付时间, 当前 updates_through)` 起增加 12 个月，不追收中断月份，不自动扣款；团队续购按所购命名席位数执行。无“终身所有未来更新”方案。一个命名用户可在本人电脑使用，不采集硬件指纹；离线席位是合同约定，不宣传实时并发强制执行。团队购买只合并席位，不隐含协作云服务。
+## Purchase, trial and updates
 
-新增付费层完整试用 14 天，到期回到免费层；完整买断产品试用结束保留读取/搜索/备份/导出。离线试用只作便利和约定，不宣传防回拨或不可重置。付费技术/平台门禁通过前不发预售码。支付成功后由 Commerce 幂等签发 Permit；用发行时间与 `updates_through` 判断更新资格，不能拿当前时间让已获版本突然失效。离线退款/撤销的及时性不做无法实现的承诺。
+A purchase includes 12 months of new-version eligibility. Versions obtained within that update window remain usable afterwards. Optional renewal adds 12 months from `max(payment time, current updates_through)`, with no back-billing for a gap and no automatic charge. Team renewals apply to the purchased number of named seats. There is no lifetime-all-future-updates plan. One named user can use their own computers; no hardware fingerprint is collected. Offline seat limits are contractual, not real-time concurrency enforcement. A team purchase combines seats; it does not imply a collaboration cloud.
 
-无定制开发、硬件采购、认证或响应时限 SLA 包含在上述标价中。支持范围为购买版本、明确支持平台及已验证组合的异步问题处理，不能承诺一人团队全天响应。公开销售前补齐退款/取消说明、币种/税费最终价、隐私与支持范围并在结账页确认；本文件不代替最终结账条款。
+A new paid tier has a full 14-day trial, then returns to the free tier. For a complete paid product, trial expiry preserves reading/search/backup/export. Offline trial state is a convenience and an agreement, not advertised as rollback-proof or impossible to reset. Do not presell codes before technical and platform gates pass. After a successful payment, Commerce issues Permit credentials idempotently. Use release time and `updates_through` for update eligibility; the current date must not suddenly invalidate an acquired version. Do not promise prompt offline refund/revocation enforcement that cannot be implemented.
 
-## 开卖前的下一步
+The target price includes no custom development, hardware procurement, certification or response-time SLA. Support is asynchronous issue handling for the purchased version, supported platforms and validated combinations; a solo maintainer must not promise round-the-clock responses. Before sales, publish refund/cancellation rules, currency/tax totals, privacy terms and support scope, and confirm them at checkout. This plan is not a substitute for final checkout terms.
 
-先完成 #4 的硬件在环支持矩阵、断电/超时/恢复与产物更新。至少一个真实参考 ECU/适配器组合形成可复现报告后才建立 paid offer；不得承诺所有 OEM、算法或安全认证。
+## Next gate before sales
 
-执行入口：[本仓 #4](https://github.com/turinglambdaai/flashpilot/issues/4)。先交付这个切片，再扩展商业功能。
+Complete the hardware-in-the-loop support matrix, power-loss/timeout/recovery scenarios and artifact updates in #4. Establish a paid offer only after at least one real reference ECU/adapter combination has a reproducible report. Do not promise every OEM, security algorithm or safety certification.
 
-## English
+Execution entry: [issue #4](https://github.com/turinglambdaai/flashpilot/issues/4). Complete this bounded slice before expanding commercial features.
 
-Launch design, not a live offer. FlashPilot: 单人 ¥1,499 / US$219；5 席 ¥5,999 / US$879；单席更新 ¥599 / US$89，5 席更新 ¥2,399 / US$359. One named user; perpetual use of eligible official releases with 12 months of updates. Renewal is optional and never an automatic charge. Current development previews are not retroactively restricted.
-
-组合定位及通用边界：[PORTFOLIO](https://github.com/turinglambdaai/turinglambdaai.github.io/blob/master/PORTFOLIO.md)。
+Portfolio role and shared boundaries: [PORTFOLIO](https://github.com/turinglambdaai/turinglambdaai.github.io/blob/master/PORTFOLIO.md).

@@ -130,4 +130,4 @@ Report reproducible bugs and feature requests through [GitHub Issues](https://gi
 
 ## Product & pricing
 
-免费引擎 + 已验证工程发行版买断. Launch design, not a live offer: see [PRICING.md](PRICING.md) for prices, boundaries and release gates. Current development builds do not gain payment restrictions from this documentation change.
+Free engine with a purchase for a validated engineering distribution. Read the complete [English pricing and product policy](PRICING.md) or [简体中文](PRICING.zh-CN.md) for target prices, free/paid boundaries and launch gates. This is a launch design, not a live offer; this documentation does not add payment restrictions to current development builds.
