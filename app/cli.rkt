@@ -18,6 +18,7 @@
          flashpilot/diagnostics/flash/plans
          flashpilot/diagnostics/flash/validation
          flashpilot/diagnostics/channels/lin-uds-channel
+         flashpilot/diagnostics/support-matrix
          flashpilot/diagnostics/uds/protocol)
 
 ;; ----------------------------------------------------------------------------
@@ -103,6 +104,7 @@
     "  flashpilot validate <plan.json>       lint a plan (overlap, sizes, gaps)\n"
     "  flashpilot odx-import <file.odx|.pdx> import ODX into a plan (subset)\n"
     "  flashpilot verify <plan.json>         plan + fingerprint checks only\n"
+    "  flashpilot transports                 adapter/protocol support matrix\n"
     "  flashpilot dtc [read|clear]           diagnostic trouble codes\n"
     "  flashpilot request <hex>              one raw UDS request\n"
     "  flashpilot udid <did>                 read a DID (22 XX XX)\n"
@@ -219,6 +221,15 @@
                         'segments (length (uds-flash-plan-segments plan*))))
   0)
 
+;; transports: the support matrix straight from code — evidence levels are
+;; honest labels (ci-simulated / implemented-unverified / planned), never
+;; prose that drifts from the transport modules.
+(define (cmd-transports args)
+  (print-result (hasheq 'ok #t
+                        'transports (transports-json)
+                        'evidenceLevels evidence-levels))
+  0)
+
 (define (cmd-dtc args)
   (define action
     (string->symbol (string-downcase (or (arg-positional args 0) "read"))))
@@ -290,6 +301,7 @@
          (set! channel (make-channel args))
          (case command
            [(flash) (cmd-flash args)]
+           [(transports) (cmd-transports args)]
            [(validate) (cmd-validate args)]
            [(odx-import odx) (cmd-odx-import args)]
            [(verify) (cmd-verify args)]

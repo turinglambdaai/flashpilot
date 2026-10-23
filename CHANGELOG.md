@@ -7,6 +7,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- **Support matrix as code** — `flashpilot transports --json` emits every
+  transport/adapter subset with an explicit evidence level
+  (`ci-simulated` / `implemented-unverified` / `planned`) from
+  `flashpilot/diagnostics/support-matrix.rkt`; PCAN FD and hardware LIN
+  are labeled planned, and a hardware-in-loop level awaits a versioned
+  adapter + reference-ECU reproduction report (issue #4 gate).
+- **Recovery semantics documented** — `docs/support-matrix.md` (bilingual)
+  records the block-retry bound, the power-loss re-run path (fingerprint
+  gate, restart from erase), session-loss behavior and the guarantee that
+  erase/download are never blindly retried; `onFail`/`powerGuard` plan
+  fields are documented as parsed-but-not-yet-enforced.
+- README positioning aligned with PRICING: free AGPL engine, official
+  validated distribution as the planned paid tier.
+
 - **UDS over LIN (simulated)** — `--transport lin` plus
   `flashpilot/diagnostics/isotp/lin-{tp,endpoint}.rkt` and
   `channels/lin-uds-channel.rkt`: ISO 17987-3 style diagnostic framing
