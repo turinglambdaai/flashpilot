@@ -7,6 +7,12 @@ The focused, license-free alternative to vFlash: one resident-free CLI, determin
 
 **English** · [中文](README.zh-CN.md) · [User guide](https://flashpilot.jrtx.site/guide.html)
 
+## Start here
+
+The AGPL engine, CLI and MCP remain free, including CI use under the existing licence. Validated official engineering assets are planned; no paid edition is on sale. Desktop source/preview paths target macOS, Windows and Linux. The published archive set does not imply every adapter, ECU or bus has been qualified.
+
+[Installation, first use, privacy, backup and recovery](docs/USER-GUIDE.md) · [简体中文](docs/USER-GUIDE.zh-CN.md)
+
 ## Why FlashPilot?
 
 Automotive flashing today means vFlash: expensive per-seat licenses, a Windows GUI, and automation only through a COM API that agents can't drive. The flashing knowledge itself — seed-key algorithms, memory layouts, sequences — used to be a moat of accumulated authoring. In the AI era that authoring cost collapses: an agent can draft a flash plan from an OEM spec. What remains valuable is the **closed loop**: generate a plan → verify its fingerprint → flash with power/sequence guards → collect evidence on failure → regenerate.
@@ -119,15 +125,3 @@ raco test racket/flashpilot
 ## License
 
 AGPL-3.0.
-
-## Delivery priorities (2026-10-23)
-
-The current product review issue linked from AGENTS owns the next bounded slice and its acceptance scenarios. Follow the existing product specification and the [family delivery standard](https://github.com/turinglambdaai/turinglambdaai.github.io/blob/master/docs/PRODUCT-STANDARD.md). Hardware, native-platform and live-payment gates remain explicit; this documentation update does not claim they passed.
-
-## Feedback and diagnostics
-
-Report reproducible bugs and feature requests through [GitHub Issues](https://github.com/turinglambdaai/flashpilot/issues). Include the release, OS/architecture and steps; inspect and redact diagnostics before sharing. Do not post API keys, license files, vault contents or private documents. For sensitive security reports, follow SECURITY.md when present; otherwise request a private contact route without disclosing sensitive details. Nothing is uploaded automatically.
-
-## Product & pricing
-
-Free engine with a purchase for a validated engineering distribution. Read the complete [English pricing and product policy](PRICING.md) or [简体中文](PRICING.zh-CN.md) for target prices, free/paid boundaries and launch gates. This is a launch design, not a live offer; this documentation does not add payment restrictions to current development builds.

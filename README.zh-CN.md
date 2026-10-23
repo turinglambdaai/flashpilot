@@ -7,6 +7,12 @@
 
 [English](README.md) · **中文** · [用户手册](https://flashpilot.jrtx.site/guide.html)
 
+## 开始使用
+
+AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使用。规划有经验证的官方工程资产；付费版尚未开售。 桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。
+
+[安装、首次使用、隐私与备份恢复](docs/USER-GUIDE.zh-CN.md) · [English](docs/USER-GUIDE.md)
+
 ## 为什么做 FlashPilot？
 
 今天的汽车烧录意味着 vFlash：昂贵的按席位授权、Windows GUI，以及 agent 无法驱动的 COM API 自动化。烧录知识本身——seed-key 算法、内存布局、时序——曾经是长期积累出来的护城河。AI 时代这条创作的成本坍塌了：agent 可以根据 OEM 规格书起草一份烧录计划。真正剩下的价值是**闭环**：生成计划 → 校验指纹 → 带电源/时序保护地烧录 → 失败时收集证据 → 重新生成。
@@ -115,11 +121,3 @@ raco test racket/flashpilot
 ## 许可证
 
 AGPL-3.0。
-
-## 反馈与诊断
-
-问题和建议请使用 [GitHub Issues](https://github.com/turinglambdaai/flashpilot/issues)，附版本、系统/架构和复现步骤。分享前先检查并脱敏诊断；不要公开 API key、授权凭据、密钥库或私有文档。安全敏感问题优先按 SECURITY.md 联系；未提供私密渠道时，先请求私下联系方式，不在公开 issue 中披露敏感细节。此入口不会自动上传数据。
-
-## 产品与收费
-
-免费引擎 + 已验证工程发行版买断。首发目标、免费边界与开卖门禁见 [PRICING.md](PRICING.zh-CN.md)；当前仍在开发，没有实际用户，不表示已开售，也不因此给开发版即时加收费墙。
