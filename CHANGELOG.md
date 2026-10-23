@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- **UDS over LIN (simulated)** — `--transport lin` plus
+  `flashpilot/diagnostics/isotp/lin-{tp,endpoint}.rkt` and
+  `channels/lin-uds-channel.rkt`: ISO 17987-3 style diagnostic framing
+  (0x3C/0x3D, NAD + PCI, 6-byte windows, master-paced, no flow control).
+  The full flash workflow runs against the simulated ECU over LIN in CI.
+  Hardware LIN adapters (PLIN/Kvaser) are future work.
+- Fixed a latent simulated-bus race: an empty inbox initialized as `'()`
+  (truthy) could crash a transport pump that polled before the first
+  frame arrived; inboxes now start as `#f`.
+
 - **CAN FD support** — plans accept `"dataLength"` (8 classic default; snaps
   to the nearest legal FD length up to 64). ISO-TP codec, endpoints and the
   simulated ECU chunk frames at the configured data length; SocketCAN gains

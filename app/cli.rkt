@@ -17,6 +17,7 @@
          flashpilot/diagnostics/flash/odx
          flashpilot/diagnostics/flash/plans
          flashpilot/diagnostics/flash/validation
+         flashpilot/diagnostics/channels/lin-uds-channel
          flashpilot/diagnostics/uds/protocol)
 
 ;; ----------------------------------------------------------------------------
@@ -64,6 +65,7 @@
 
 (define (make-channel args #:data-length [data-length 8])
   (case (hash-ref args 'transport #f)
+    [(lin) (make-lin-uds-channel)]
     [(doip)
      (define host (or (hash-ref args 'host #f)
                       (fail "validation" "--transport doip requires --host." 2)))
@@ -107,6 +109,7 @@
     "\n"
     "Options:\n"
     "  --transport doip --host H [--port N]  DoIP transport (default sim ECU)\n"
+    "  --transport lin                       simulated LIN (UDS over LIN)\n"
     "\n"
     "Exit codes: 0 ok · 1 flash/assert failed · 2 usage · 3 not found · 4 transport\n")))
 

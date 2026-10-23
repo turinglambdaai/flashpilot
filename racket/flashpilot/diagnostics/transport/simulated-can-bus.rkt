@@ -47,7 +47,9 @@
   (call-with-bus-mutex bus (lambda () (length (unbox (simulated-can-bus-log-box bus))))))
 
 (define (simulated-can-bus-attach bus)
-  (define port (sim-can-port bus (make-semaphore 0) (box '())))
+  ;; inbox-box: #f when empty, else the queued frame list — '() would be
+  ;; truthy in Racket and the pump would take the dequeue branch empty.
+  (define port (sim-can-port bus (make-semaphore 0) (box #f)))
   (call-with-bus-mutex bus
                        (lambda ()
                          (set-box! (simulated-can-bus-ports-box bus)
