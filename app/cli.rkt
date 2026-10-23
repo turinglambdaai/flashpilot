@@ -62,7 +62,7 @@
 ;; Channel: sim ECU by default; DoIP with --transport doip --host H
 ;; ----------------------------------------------------------------------------
 
-(define (make-channel args)
+(define (make-channel args #:data-length [data-length 8])
   (case (hash-ref args 'transport #f)
     [(doip)
      (define host (or (hash-ref args 'host #f)
@@ -75,7 +75,7 @@
                             (or (string->number
                                  (format "0x~a" (hash-ref args 'ecu "0E10")))
                                 #x0E10))]
-    [else (make-sim-uds-channel)]))
+    [else (make-sim-uds-channel #:data-length data-length)]))
 
 (define (channel-request ch request)
   (if (sim-uds-channel? ch)
@@ -145,7 +145,7 @@
           (format "Image fingerprint ~a does not match expectedFingerprint ~a."
                   fingerprint expected)
           1))
-  (define channel (make-channel args))
+  (define channel (make-channel args #:data-length (uds-flash-hardening-data-length hardening)))
   (define result (channel-flash channel plan*))
   (print-result (hasheq 'ok (uds-flash-result-ok result)
                         'bytes (uds-flash-result-total-bytes result)

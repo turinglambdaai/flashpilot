@@ -22,7 +22,14 @@
          isotp-endpoint-receive!
          isotp-endpoint-dispose!)
 
-(struct isotp-options (block-size st-min-ms flow-control-timeout-ms poll-seconds) #:transparent)
+;; data-length: 8 for classic CAN, or a CAN FD data length (12..64); the
+;; codec chunks every frame to exactly this many bytes.
+(struct isotp-options
+        (block-size st-min-ms flow-control-timeout-ms poll-seconds data-length)
+  #:transparent)
+
+(define (options-data-length options)
+  (or (isotp-options-data-length options) classic-data-length))
 
 (struct exn:fail:isotp exn:fail () #:transparent)
 
@@ -58,7 +65,8 @@
 (define (set-rx! rs buffer length* offset expected fc-sent)
   (set-box! rs (vector buffer length* offset expected fc-sent)))
 
-(define (make-isotp-endpoint bus tx-id rx-id [options (isotp-options 0 0 1000 0.002)])
+(define (make-isotp-endpoint bus tx-id rx-id
+                             [options (isotp-options 0 0 1000 0.002 8)])
   (define ep-box (box #f))
   (define ep
     (isotp-endpoint bus
@@ -106,11 +114,16 @@
                   (semaphore-post (isotp-endpoint-send-gate ep)))))
 
 (define (send-locked! ep payload cancel)
+  (define dlen (options-data-length (isotp-endpoint-options ep)))
+  (define fd? (> dlen classic-data-length))
   (cond
-    [(<= (length payload) 7) (send-can! ep (encode-single payload))]
+    [(<= (length payload) 7) (send-can! ep (encode-single payload dlen))]
+    [(and fd? (<= (length payload) 62))
+     ;; CAN FD keeps small transfers on a single escaped frame.
+     (send-can! ep (encode-single payload dlen))]
     [else
      ;; First frame, then wait for a flow control (N_Bs timeout).
-     (send-can! ep (encode-first-prefix payload))
+     (send-can! ep (encode-first-prefix payload dlen))
      (define fc (receive-flow-control! ep cancel))
      (define fc*
        (case (isotp-frame-flow-status fc)
@@ -126,13 +139,13 @@
      (define st-min-seconds (/ (max 0 (isotp-frame-st-min-ms fc*)) 1000.0))
      (define block-size (isotp-frame-block-size fc*))
      (define total (length payload))
-     (define first-chunk (if (<= total 4095) 6 2))
+     (define first-chunk (if (<= total 4095) (- dlen 2) (- dlen 6)))
      (let loop ([offset first-chunk]
                 [sequence 1]
                 [block-count 0])
        (when (< offset total)
-         (define chunk-size (min (- total offset) (sub1 classic-data-length)))
-         (send-can! ep (encode-consecutive sequence (list-tail payload offset)))
+         (define chunk-size (min (- total offset) (sub1 dlen)))
+         (send-can! ep (encode-consecutive sequence (list-tail payload offset) dlen))
          (define next-offset (+ offset chunk-size))
          (define next-sequence (bitwise-and (+ sequence 1) #x0F))
          (define next-block (add1 block-count))
@@ -220,7 +233,10 @@
   (unless (= (can-frame-id frame) (isotp-endpoint-rx-id ep))
     (void))
   (when (= (can-frame-id frame) (isotp-endpoint-rx-id ep))
-    (define decoded (try-decode-frame (can-frame-data frame)))
+    (define decoded
+      (try-decode-frame (can-frame-data frame)
+                        #:fd? (> (options-data-length (isotp-endpoint-options ep))
+                                 classic-data-length)))
     (when decoded
       (case (isotp-frame-type decoded)
         [(single)

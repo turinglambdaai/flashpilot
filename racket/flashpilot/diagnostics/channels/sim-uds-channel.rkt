@@ -518,11 +518,14 @@
 (define (make-simulated-uds-ecu bus
                                 #:tester-to-ecu-id [tester-to-ecu-id #x7E0]
                                 #:ecu-to-tester-id [ecu-to-tester-id #x7E8]
-                                #:options [options #f])
+                                #:options [options #f]
+                                #:isotp-options [isotp-opts #f])
   (define processor (make-uds-processor (or options (default-uds-ecu-options))))
   (define ecu-port-bus (make-sim-can-port-bus (simulated-can-bus-attach bus) "sim-ecu"))
   (sim-can-port-bus-open! ecu-port-bus)
-  (define endpoint (make-isotp-endpoint ecu-port-bus ecu-to-tester-id tester-to-ecu-id))
+  (define endpoint
+    (make-isotp-endpoint ecu-port-bus ecu-to-tester-id tester-to-ecu-id
+                         (or isotp-opts (isotp-options 0 0 1000 0.002 8))))
   (define dispatch
     (thread (lambda ()
               (let loop ()
@@ -572,7 +575,7 @@
                    key-deriver-name
                    max-block-payload
                    (or ecu-options (default-uds-ecu-options))
-                   (or isotp-opts (isotp-options 0 0 1000 0.002))
+                   (or isotp-opts (isotp-options 0 0 1000 0.002 8))
                    (or transport-label "iso-tp/can")
                    (make-semaphore 1)
                    (box #f)
@@ -661,6 +664,7 @@
                           key-deriver-name
                           max-block-payload
                           ecu-options
+                          isotp-options
                           mutex
                           bus
                           ecu-box
@@ -671,13 +675,15 @@
                               #:security-level [security-level #x01]
                               #:key-deriver-name [key-deriver-name "xor0x5a"]
                               #:max-block-payload [max-block-payload 1024]
-                              #:ecu-options [ecu-options #f])
+                              #:ecu-options [ecu-options #f]
+                              #:data-length [data-length 8])
   (sim-uds-channel tester-to-ecu-id
                    ecu-to-tester-id
                    security-level
                    key-deriver-name
                    max-block-payload
                    (or ecu-options (default-uds-ecu-options))
+                   (isotp-options 0 0 1000 0.002 data-length)
                    (make-semaphore 1)
                    (make-simulated-can-bus)
                    (box #f)
@@ -695,7 +701,8 @@
                  (make-simulated-uds-ecu (sim-uds-channel-bus c)
                                          #:tester-to-ecu-id (sim-uds-channel-tester-to-ecu-id c)
                                          #:ecu-to-tester-id (sim-uds-channel-ecu-to-tester-id c)
-                                         #:options (sim-uds-channel-ecu-options c)))
+                                         #:options (sim-uds-channel-ecu-options c)
+                                         #:isotp-options (sim-uds-channel-isotp-options c)))
        (set-box! (sim-uds-channel-channel-box c)
                  (make-can-uds-channel
                   (make-sim-can-port-bus (simulated-can-bus-attach (sim-uds-channel-bus c))
@@ -705,7 +712,8 @@
                   #:security-level (sim-uds-channel-security-level c)
                   #:key-deriver-name (sim-uds-channel-key-deriver-name c)
                   #:max-block-payload (sim-uds-channel-max-block-payload c)
-                  #:ecu-options (sim-uds-channel-ecu-options c)))))))
+                  #:ecu-options (sim-uds-channel-ecu-options c)
+                  #:isotp-options (sim-uds-channel-isotp-options c)))))))
 
 (define (sim-channel-request c request p2-ms p2-star-ms)
   (open-sim-channel! c)

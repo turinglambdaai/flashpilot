@@ -15,7 +15,7 @@ FlashPilot is built around that loop.
 
 - **Declarative flash plans** — one JSON document per ECU: segments (inline, BIN, Intel HEX, S-record), session, security access with pluggable key providers, erase/download/verify routines, timings, recovery strategy, power guard, expected fingerprint.
 - **ODX import + plan lint** — import the flash subset of ASAM ODX (`.odx`/`.pdx`: MEMORY-SEGMENT ranges, inline DATA, DATAFILE references) into a plan with honest reporting of everything not converted; lint plans for overlapping segments, empty ranges and gaps before any driver call.
-- **Real transports** — SocketCAN (Linux), PEAK PCAN (Windows), DoIP (Ethernet). ISO-TP (ISO 15765-2) underneath; LIN planned.
+- **Real transports** — SocketCAN (Linux), PEAK PCAN (Windows), DoIP (Ethernet). ISO-TP (ISO 15765-2) underneath on classic CAN **and CAN FD** (plan `dataLength` up to 64, SocketCAN FD framing, simulated FD bus); LIN planned.
 - **Agent-first CLI and MCP server** — deterministic JSON output, exit codes that never lie, and failure evidence (bounded, fingerprinted, audited) so an agent can diagnose and retry without a human opening a vendor tool. The same engine also speaks MCP over stdio: `validate`, `flash`, `request`, `udid` and ODX import as agent tools.
 - **Safety by default** — plans validate expected fingerprints before any driver call; in-programming power guards abort on out-of-band current; destructive plans say so.
 
@@ -23,9 +23,9 @@ Not a CANoe clone: no vehicle-network simulation, no CAPL, no analysis-window co
 
 ## Status
 
-**v0.1.0 — core engine**: UDS (ISO 14229) with P2/P2* timing and NRC handling, UDS flash workflow (session → security access → erase → download → verify → reset) with per-step audit, declarative plans with recovery strategies (retry / reset-and-retry), image fingerprint gate, in-programming power guard, DTC read/clear, Intel HEX + S-record + BIN image models, pluggable security providers (`command:<id>` external algorithms), ISO-TP over simulated CAN and DoIP, and a built-in simulated ECU so the entire loop runs hardware-free in CI.
+**v0.1.x — core engine**: UDS (ISO 14229) with P2/P2* timing and NRC handling, UDS flash workflow (session → security access → erase → download → verify → reset) with per-step audit, declarative plans with recovery strategies (retry / reset-and-retry), image fingerprint gate, in-programming power guard, DTC read/clear, Intel HEX + S-record + BIN image models, pluggable security providers (`command:<id>` external algorithms), ISO-TP over simulated CAN and DoIP, and a built-in simulated ECU so the entire loop runs hardware-free in CI.
 
-The next gates: UDS over LIN, DoIP Ethernet hardening against real ECUs, and a plan library.
+The next gates: UDS over LIN, DoIP Ethernet hardening against real ECUs, and a plan library. CAN FD shipped: set `"dataLength": 64` in a plan (see `examples/plan.sim-fd.json`) and the whole loop — simulated ECU included — runs FD framing.
 
 **Released**: v0.1.0 ships the agent-first CLI (`flash` / `verify` / `dtc` / `request` / `udid`) for Windows x64, Linux x64/arm64 and macOS arm64/x64 — zip + SHA-256 per platform plus a combined SHA256SUMS on the [Releases](https://github.com/turinglambdaai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
 

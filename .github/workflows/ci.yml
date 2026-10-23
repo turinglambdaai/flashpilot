@@ -48,4 +48,5 @@ jobs:
           racket app/cli.rkt verify examples/plan.sim.json
           racket app/cli.rkt flash examples/plan.sim.json
           racket app/cli.rkt validate examples/plan.sim.json
+          racket app/cli.rkt flash examples/plan.sim-fd.json
           racket scripts/mcp-smoke.rkt

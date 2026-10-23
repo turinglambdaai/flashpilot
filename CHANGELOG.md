@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- **CAN FD support** — plans accept `"dataLength"` (8 classic default; snaps
+  to the nearest legal FD length up to 64). ISO-TP codec, endpoints and the
+  simulated ECU chunk frames at the configured data length; SocketCAN gains
+  `canfd_frame` wire support and enables `CAN_RAW_FD_FRAMES` in FD mode.
+  Classic CAN behavior is bit-identical; PCAN FD waits on hardware
+  verification. `examples/plan.sim-fd.json` flashes the simulated ECU over
+  FD in CI.
+
 - **ODX import (subset)** — `odx-import` command plus
   `flashpilot/diagnostics/flash/odx`: `.odx`/`.odx-f`/`.pdx` into flash
   plans (MEMORY-SEGMENT ranges, inline base64 DATA, DATAFILE references).

@@ -13,7 +13,8 @@
          racket/string)
 
 (require flashpilot/core/contracts
-         flashpilot/diagnostics/flash/image)
+         flashpilot/diagnostics/flash/image
+         flashpilot/diagnostics/isotp/codec)
 
 (provide (struct-out uds-flash-plan)
          (struct-out uds-flash-segment)
@@ -41,7 +42,7 @@
 (struct uds-flash-segment (address data file) #:transparent)
 
 (struct flash-power-guard (min-ma max-ma poll-ms) #:transparent)
-(struct uds-flash-hardening (plan on-fail power-guard expected-fingerprint)
+(struct uds-flash-hardening (plan on-fail power-guard expected-fingerprint data-length)
   #:transparent)
 
 ;; Deterministic FNV-1a over addresses + lengths + data, in plan order.
@@ -134,7 +135,13 @@
             (hash-ref guard-raw 'minMa #f)
             (hash-ref guard-raw 'maxMa #f)
             (or (hash-ref guard-raw 'pollMs #f) 200)))))
-  (uds-flash-hardening plan on-fail power-guard (hash-ref doc 'expectedFingerprint #f)))
+  ;; dataLength opts the transport into CAN FD (8 = classic; any other
+  ;; value snaps up to the nearest legal FD length). DoIP ignores it.
+  (define data-length
+    (let ([v (hash-ref doc 'dataLength #f)])
+      (if v (can-fd-next-dlen v) classic-data-length)))
+  (uds-flash-hardening plan on-fail power-guard
+                       (hash-ref doc 'expectedFingerprint #f) data-length))
 
 (define (read-segment-file file base-directory)
   (when (or (not file) (string-blank? file))
