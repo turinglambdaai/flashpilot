@@ -118,6 +118,14 @@
           'error 'null
           'findings (plan-issues->json issues)
           'segments (length loaded)
+          'segmentDetails
+          (for/list ([seg (in-list loaded)])
+            (hasheq 'address (uds-flash-segment-address seg)
+                    'bytes (length (uds-flash-segment-data seg))
+                    'source (or (uds-flash-segment-file seg) "inline")))
+          'session (or (uds-flash-plan-session plan) 'null)
+          'securityLevel (or (uds-flash-plan-security-level plan) 'null)
+          'dataLength (uds-flash-hardening-data-length hardening)
           'fingerprint fingerprint
           'expected (or expected 'null)
           'match (if expected match 'null)

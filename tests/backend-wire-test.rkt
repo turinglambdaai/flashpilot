@@ -82,6 +82,11 @@
    (check-equal? (hash-ref verified-json 'segments) 1)
    (check-equal? (hash-ref verified-json 'error) 'null)
    (check-true (string? (hash-ref verified-json 'fingerprint)))
+   (define seg-detail (car (hash-ref verified-json 'segmentDetails)))
+   (check-equal? (hash-ref seg-detail 'address) #x08000000)
+   (check-equal? (hash-ref seg-detail 'source) "fw.bin")
+   (check-true (> (hash-ref seg-detail 'bytes) 0))
+   (check-equal? (hash-ref verified-json 'session) 2)
 
    ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.
    (define unreadable

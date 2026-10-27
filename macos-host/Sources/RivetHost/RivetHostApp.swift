@@ -65,17 +65,48 @@ struct PlanFinding: Identifiable, Equatable {
     let message: String
 }
 
+struct SegmentDetail: Identifiable, Equatable {
+    let id = UUID()
+    let address: UInt64
+    let byteCount: Int
+    let source: String
+}
+
+struct PlanRequirements: Equatable {
+    var session: Int?
+    var securityLevel: Int?
+    var dataLength: Int?
+
+    var transportLabel: String {
+        guard let dataLength else { return "transport unspecified" }
+        return dataLength <= 8 ? "Classic CAN" : "CAN FD (\(dataLength)-byte frames)"
+    }
+
+    var text: String {
+        var parts: [String] = []
+        if let session { parts.append(String(format: "session 0x%02X", session)) }
+        if let securityLevel { parts.append("security level \(securityLevel)") }
+        parts.append(transportLabel)
+        return parts.joined(separator: " · ")
+    }
+}
+
 struct PlanVerification: Equatable {
     var ok: Bool
     var file: String
     var findings: [PlanFinding]
     var segments: Int?
+    var segmentDetails: [SegmentDetail]
+    var requirements: PlanRequirements?
     var fingerprint: String?
     var expected: String?
     var match: Bool?
     var errorKind: String?
     var errorMessage: String?
     var rawJSON: String
+
+    var errorCount: Int { findings.filter { $0.severity == "error" }.count }
+    var warningCount: Int { findings.filter { $0.severity == "warning" }.count }
 
     static func parse(_ resultJSON: String) -> PlanVerification? {
         guard let data = resultJSON.data(using: .utf8),
@@ -85,20 +116,44 @@ struct PlanVerification: Equatable {
             PlanFinding(severity: item["severity"] as? String ?? "warning",
                         message: item["message"] as? String ?? "")
         }
+        let segmentDetails = ((doc["segmentDetails"] as? [[String: Any]]) ?? []).compactMap { item in
+            (item["address"] as? NSNumber).map {
+                SegmentDetail(address: $0.uint64Value,
+                              byteCount: (item["bytes"] as? NSNumber)?.intValue ?? 0,
+                              source: item["source"] as? String ?? "inline")
+            }
+        }
+        var requirements: PlanRequirements?
+        if doc["session"] != nil || doc["dataLength"] != nil || doc["securityLevel"] != nil {
+            requirements = PlanRequirements(
+                session: (doc["session"] as? NSNumber)?.intValue,
+                securityLevel: (doc["securityLevel"] as? NSNumber)?.intValue,
+                dataLength: (doc["dataLength"] as? NSNumber)?.intValue)
+        }
         if let error = doc["error"] as? [String: Any] {
             return PlanVerification(
                 ok: ok, file: doc["file"] as? String ?? "", findings: findings,
-                segments: doc["segments"] as? Int, fingerprint: doc["fingerprint"] as? String,
+                segments: doc["segments"] as? Int, segmentDetails: segmentDetails,
+                requirements: requirements, fingerprint: doc["fingerprint"] as? String,
                 expected: nil, match: nil,
                 errorKind: error["kind"] as? String, errorMessage: error["message"] as? String,
                 rawJSON: resultJSON)
         }
         return PlanVerification(
             ok: ok, file: doc["file"] as? String ?? "", findings: findings,
-            segments: doc["segments"] as? Int, fingerprint: doc["fingerprint"] as? String,
+            segments: doc["segments"] as? Int, segmentDetails: segmentDetails,
+            requirements: requirements, fingerprint: doc["fingerprint"] as? String,
             expected: doc["expected"] as? String, match: doc["match"] as? Bool,
             errorKind: nil, errorMessage: nil, rawJSON: resultJSON)
     }
+}
+
+struct ReadinessCheck: Identifiable, Equatable {
+    let id = UUID()
+    let code: String
+    let passed: Bool
+    let severity: String
+    let summary: String
 }
 
 @MainActor
@@ -108,6 +163,7 @@ final class AppModel: ObservableObject {
     @Published var target: BenchTarget?
     @Published var readinessOK: Bool?
     @Published var readinessRaw = ""
+    @Published var readinessChecks: [ReadinessCheck] = []
     @Published var fixtures: [String] = []
     @Published var pickedPlanURL: URL?
     @Published var verification: PlanVerification?
@@ -202,12 +258,18 @@ final class AppModel: ObservableObject {
             do {
                 let api = RivetAPI(client: backend.client)
                 let raw = try await api.bench_validate()
-                let ok = (try? JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [String: Any])?
-                    .flatMap { $0["ok"] as? Bool } ?? false
-                readinessOK = ok
+                let doc = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
+                readinessOK = (doc?["ok"] as? NSNumber)?.boolValue ?? false
+                readinessChecks = ((doc?["checks"] as? [[String: Any]]) ?? []).map { item in
+                    ReadinessCheck(code: item["code"] as? String ?? "",
+                                   passed: (item["passed"] as? NSNumber)?.boolValue ?? false,
+                                   severity: item["severity"] as? String ?? "error",
+                                   summary: item["summary"] as? String ?? "")
+                }
                 readinessRaw = raw
             } catch {
                 readinessOK = false
+                readinessChecks = []
                 readinessRaw = "Error: \(error)"
             }
         }
@@ -223,12 +285,14 @@ final class AppModel: ObservableObject {
                 let api = RivetAPI(client: backend.client)
                 let raw = try await api.verify_plan(planPath: path)
                 verification = PlanVerification.parse(raw) ?? PlanVerification(
-                    ok: false, file: path, findings: [], segments: nil, fingerprint: nil,
+                    ok: false, file: path, findings: [], segments: nil, segmentDetails: [],
+                    requirements: nil, fingerprint: nil,
                     expected: nil, match: nil, errorKind: "plan-unreadable",
                     errorMessage: "The engine returned an unreadable verification result.", rawJSON: raw)
             } catch {
                 verification = PlanVerification(
-                    ok: false, file: path, findings: [], segments: nil, fingerprint: nil,
+                    ok: false, file: path, findings: [], segments: nil, segmentDetails: [],
+                    requirements: nil, fingerprint: nil,
                     expected: nil, match: nil, errorKind: "plan-unreadable",
                     errorMessage: "\(error)", rawJSON: "")
             }

@@ -9,7 +9,9 @@ struct ContentView: View {
             identityHeader
             Divider()
             Form {
-                Section("Readiness") {
+                // The connected, live side of the bench: everything that
+                // talks to the attached target lives here.
+                Section("Target") {
                     HStack {
                         Button("Validate bench") { model.validate() }
                             .buttonStyle(.borderedProminent)
@@ -20,8 +22,26 @@ struct ContentView: View {
                         }
                     }
                     resultLine("ReadinessResult", model.readinessSummary)
+                    ForEach(model.readinessChecks) { check in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: check.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundStyle(check.passed ? Color.green : Color.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(check.summary).font(.footnote)
+                                Text(check.code).font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("ReadinessCheck-\(check.code)")
+                    }
+                    Button("Read DTCs") { model.readDtc() }
+                        .disabled(model.busy)
+                        .accessibilityIdentifier("ReadDtcButton")
+                    resultLine("DtcResult", model.dtcSummary)
                 }
-                Section("Plan verification") {
+                // The static artifact side: plans, their verification and
+                // the evidence they produced. Nothing here touches the ECU.
+                Section("Plan") {
                     if let directory = model.fixturesDirectory, !model.fixtures.isEmpty {
                         ForEach(model.fixtures, id: \.self) { fixture in
                             Button("Verify \(fixture)") {
@@ -43,12 +63,6 @@ struct ContentView: View {
                         }
                     }
                     verificationCard
-                }
-                Section("Diagnostics") {
-                    Button("Read DTCs") { model.readDtc() }
-                        .disabled(model.busy)
-                        .accessibilityIdentifier("ReadDtcButton")
-                    resultLine("DtcResult", model.dtcSummary)
                 }
             }
         }
@@ -118,6 +132,12 @@ struct ContentView: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("VerificationResult")
+                if verification.errorCount + verification.warningCount > 0 {
+                    Text("\(verification.errorCount) error\(verification.errorCount == 1 ? "" : "s") · \(verification.warningCount) warning\(verification.warningCount == 1 ? "" : "s")")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(verification.errorCount > 0 ? Color.red : Color.orange)
+                        .accessibilityIdentifier("FindingsSummary")
+                }
                 if let kind = verification.errorKind {
                     Text(recoveryHint(kind))
                         .font(.footnote)
@@ -141,8 +161,36 @@ struct ContentView: View {
                             .textSelection(.enabled)
                     }
                 }
+                if !verification.segmentDetails.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Segment layout").font(.caption).foregroundStyle(.secondary)
+                        ForEach(verification.segmentDetails) { segment in
+                            Text("\(hexAddress(segment.address)) · \(segment.byteCount) B · \(segment.source)")
+                                .font(.system(.footnote, design: .monospaced))
+                                .textSelection(.enabled)
+                                .accessibilityIdentifier("SegmentRow-\(hexAddress(segment.address))")
+                        }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("SegmentLayout")
+                }
+                if let requirements = verification.requirements {
+                    Text(requirements.text)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("PlanRequirements")
+                }
                 if let fingerprint = verification.fingerprint {
-                    fingerprintRow(verification, fingerprint: fingerprint)
+                    HStack(spacing: 6) {
+                        Text("Fingerprint").font(.caption).foregroundStyle(.secondary)
+                        Text(fingerprint).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
+                        if let expected = verification.expected {
+                            Text("expected \(expected)").font(.caption).foregroundStyle(.secondary)
+                            badge(verification.match == true ? "matches" : "mismatch", ok: verification.match == true)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("FingerprintLabel")
                 }
                 Button("Export evidence…") { model.exportEvidence() }
                     .accessibilityIdentifier("ExportEvidenceButton")
@@ -166,17 +214,8 @@ struct ContentView: View {
         }
     }
 
-    private func fingerprintRow(_ verification: PlanVerification, fingerprint: String) -> some View {
-        HStack(spacing: 6) {
-            Text("Fingerprint").font(.caption).foregroundStyle(.secondary)
-            Text(fingerprint).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
-            if let expected = verification.expected {
-                Text("expected \(expected)").font(.caption).foregroundStyle(.secondary)
-                badge(verification.match == true ? "matches" : "mismatch", ok: verification.match == true)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("FingerprintLabel")
+    private func hexAddress(_ address: UInt64) -> String {
+        String(format: "0x%08X", address)
     }
 
     private func summary(_ verification: PlanVerification) -> String {
