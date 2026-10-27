@@ -147,23 +147,22 @@ final class AppModel: ObservableObject {
             )
             let backend = EmbeddedRacketBackend(configuration: config)
 
-            Task.detached { [weak self] in
+            // MainActor-isolated task owning the result; only the blocking
+            // engine startup runs detached, with no self capture.
+            Task { [backend] in
                 do {
-                    try backend.start()
-                    let api = RivetAPI(client: backend.client)
-                    let status = try await api.bench_status()
-                    await MainActor.run {
-                        self?.backend = backend
-                        self?.adopt(status: status)
-                        self?.backendStatus = "Embedded Racket CS is ready"
-                        self?.phase = .ready
-                    }
+                    let status = try await Task.detached {
+                        try backend.start()
+                        return try await RivetAPI(client: backend.client).bench_status()
+                    }.value
+                    self.backend = backend
+                    self.adopt(status: status)
+                    self.backendStatus = "Embedded Racket CS is ready"
+                    self.phase = .ready
                 } catch {
-                    await MainActor.run {
-                        self?.backend = nil
-                        self?.backendStatus = "Backend error: \(error)"
-                        self?.phase = .failed("The verification engine could not start: \(error)")
-                    }
+                    self.backend = nil
+                    self.backendStatus = "Backend error: \(error)"
+                    self.phase = .failed("The verification engine could not start: \(error)")
                 }
             }
         } catch {
