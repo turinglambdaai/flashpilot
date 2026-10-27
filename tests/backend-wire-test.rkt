@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require json rackunit racket/match racket/path
+(require json rackunit racket/match racket/path racket/file
          rivet/backend rivet/protocol)
 
 (define test-directory
@@ -59,6 +59,8 @@
    (define status-json (string->jsexpr status))
    (check-equal? (hash-ref status-json 'product) "FlashPilot")
    (check-equal? (hash-ref status-json 'ready) #t)
+   (check-equal? (hash-ref status-json 'mode) "simulator")
+   (check-true (hash-has-key? status-json 'fixtures))
 
    (define-values (validation validation-error) (call-rpc "bench-validate"))
    (check-false validation-error)
@@ -68,5 +70,53 @@
 
    (define-values (dtcs dtc-error) (call-rpc "dtc-read"))
    (check-false dtc-error)
-   (check-equal? (hash-ref (string->jsexpr dtcs) 'ok) #t))
+   (check-equal? (hash-ref (string->jsexpr dtcs) 'ok) #t)
+
+   ;; verify-plan: valid plan, segment file resolved relative to the plan.
+   (define sim-plan
+     (simplify-path (build-path test-directory ".." "examples" "plan.sim.json")))
+   (define-values (verified verify-error) (call-rpc "verify-plan" (path->string sim-plan)))
+   (check-false verify-error)
+   (define verified-json (string->jsexpr verified))
+   (check-equal? (hash-ref verified-json 'ok) #t)
+   (check-equal? (hash-ref verified-json 'segments) 1)
+   (check-equal? (hash-ref verified-json 'error) 'null)
+   (check-true (string? (hash-ref verified-json 'fingerprint)))
+
+   ;; verify-plan: unreadable file -> distinct recovery kind, no wire error.
+   (define unreadable
+     (path->string (build-path test-directory ".." "examples" "no-such-plan.json")))
+   (define-values (unreadable-result unreadable-error) (call-rpc "verify-plan" unreadable))
+   (check-false unreadable-error)
+   (define unreadable-json (string->jsexpr unreadable-result))
+   (check-equal? (hash-ref unreadable-json 'ok) #f)
+   (check-equal? (hash-ref (hash-ref unreadable-json 'error) 'kind) "plan-unreadable")
+
+   ;; verify-plan: structurally invalid plan -> plan-invalid.
+   (define invalid-path (make-temporary-file "flashpilot-invalid-~a.json"))
+   (with-output-to-file invalid-path
+     (lambda ()
+       (write-string
+        "{\"segments\": [{\"address\": \"not-an-address\"}]}"))
+     #:exists 'truncate/replace)
+   (define-values (invalid-result invalid-error) (call-rpc "verify-plan" (path->string invalid-path)))
+   (check-false invalid-error)
+   (define invalid-json (string->jsexpr invalid-result))
+   (check-equal? (hash-ref invalid-json 'ok) #f)
+   (check-equal? (hash-ref (hash-ref invalid-json 'error) 'kind) "plan-invalid")
+   (delete-file invalid-path)
+
+   ;; verify-plan: segment file missing next to the plan -> segment-unavailable.
+   (define missing-dir (make-temporary-directory))
+   (define missing-path (build-path missing-dir "plan.json"))
+   (with-output-to-file missing-path
+     (lambda ()
+       (write-string
+        "{\"segments\": [{\"address\": \"0x08000000\", \"file\": \"no-such.bin\"}]}"))
+     #:exists 'truncate/replace)
+   (define-values (missing-result missing-error) (call-rpc "verify-plan" (path->string missing-path)))
+   (check-false missing-error)
+   (define missing-json (string->jsexpr missing-result))
+   (check-equal? (hash-ref missing-json 'ok) #f)
+   (check-equal? (hash-ref (hash-ref missing-json 'error) 'kind) "segment-unavailable"))
  (lambda () (kill-thread server-thread)))

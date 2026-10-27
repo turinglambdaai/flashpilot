@@ -41,6 +41,15 @@ func findButton(_ root: AXUIElement, names: Set<String>) -> AXUIElement? {
     }
 }
 
+func findButton(identifierPrefix prefix: String) -> (AXUIElement) -> AXUIElement? {
+    { root in
+        walk(root).first { element in
+            stringAttribute(element, kAXRoleAttribute) == (kAXButtonRole as String) &&
+                stringAttribute(element, kAXIdentifierAttribute).hasPrefix(prefix)
+        }
+    }
+}
+
 func enabled(_ element: AXUIElement) -> Bool {
     attribute(element, kAXEnabledAttribute) as? Bool ?? false
 }
@@ -91,6 +100,14 @@ do {
     }
     _ = AXUIElementSetAttributeValue(application, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
     _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+
+    // The identity card must name the simulator target before anything is
+    // pressed: target/mode is the honesty label this slice is about.
+    _ = try waitFor("simulator target identity") {
+        contains(window, fragment: "sim-ecu") && contains(window, fragment: "Mode: simulator") ? true : nil
+    }
+
+    // Primary next step: bench readiness through the embedded backend.
     let validate: AXUIElement = try waitFor("enabled Validate bench button") {
         guard let button = findButton(window, names: ["ValidateBenchButton", "Validate bench"]),
               enabled(button) else { return nil }
@@ -99,19 +116,100 @@ do {
     guard AXUIElementPerformAction(validate, kAXPressAction as CFString) == .success else {
         throw DriverError.failure("AXPress failed for Validate bench")
     }
-    _ = try waitFor("validation result from embedded backend") {
-        contains(window, fragment: "\"ok\":true") ? true : nil
+    _ = try waitFor("readiness result from embedded backend") {
+        contains(window, fragment: "Bench preflight passed") ? true : nil
+    }
+
+    // Bundled simulator fixture: full verification from a clean package.
+    let fixtureVerify = findButton(identifierPrefix: "FixtureVerifyButton-plan.sim.json")
+    let fixtureButton: AXUIElement = try waitFor("enabled Verify plan.sim.json fixture button") {
+        guard let button = fixtureVerify(window), enabled(button) else { return nil }
+        return button
+    }
+    guard AXUIElementPerformAction(fixtureButton, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for the simulator fixture")
+    }
+    _ = try waitFor("passing verification result") {
+        contains(window, fragment: "fingerprint") && contains(window, fragment: "Passed") ? true : nil
+    }
+
+    // Export evidence; the app renders the absolute path it wrote, so the
+    // driver asserts the artifact on disk through that rendered path instead
+    // of guessing the location (GUI processes resolve Application Support
+    // from the user record, not the HOME environment).
+    let exportButton: AXUIElement = try waitFor("enabled Export evidence button") {
+        guard let button = findButton(window, names: ["ExportEvidenceButton", "Export evidence…"]),
+              enabled(button) else { return nil }
+        return button
+    }
+    func renderedEvidencePath() -> String {
+        walk(window).first { stringAttribute($0, kAXIdentifierAttribute) == "EvidencePath" }
+            .map { stringAttribute($0, kAXValueAttribute) } ?? ""
+    }
+    guard AXUIElementPerformAction(exportButton, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for Export evidence")
+    }
+    let firstEvidencePath: String = try waitFor("first exported evidence file") {
+        let path = renderedEvidencePath()
+        return (!path.isEmpty && FileManager.default.fileExists(atPath: path)
+                && path.hasSuffix(".json")) ? path : nil
+    }
+
+    // Failure injection: the shipped missing-image fixture must produce the
+    // distinct segment-unavailable recovery, not a dead screen.
+    let missingVerify = findButton(identifierPrefix: "FixtureVerifyButton-plan.sim-missing-image.json")
+    let missingButton: AXUIElement = try waitFor("enabled missing-image fixture button") {
+        guard let button = missingVerify(window), enabled(button) else { return nil }
+        return button
+    }
+    guard AXUIElementPerformAction(missingButton, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for the missing-image fixture")
+    }
+    _ = try waitFor("segment-unavailable recovery finding") {
+        contains(window, fragment: "segment-unavailable") &&
+            contains(window, fragment: "segment image referenced by the plan is missing") ? true : nil
+    }
+    // Re-resolve the button: the verification card re-rendered after the
+    // missing-image verification, so the earlier AX reference may be stale.
+    let exportButton2: AXUIElement = try waitFor("enabled Export evidence button (second)") {
+        guard let button = findButton(window, names: ["ExportEvidenceButton", "Export evidence…"]),
+              enabled(button) else { return nil }
+        return button
+    }
+    guard AXUIElementPerformAction(exportButton2, kAXPressAction as CFString) == .success else {
+        throw DriverError.failure("AXPress failed for the second evidence export")
+    }
+    let secondEvidencePath: String = try waitFor("second exported evidence file") {
+        let path = renderedEvidencePath()
+        return (!path.isEmpty && path != firstEvidencePath &&
+                FileManager.default.fileExists(atPath: path)) ? path : nil
+    }
+    for path in [firstEvidencePath, secondEvidencePath] {
+        guard (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: path)))) != nil else {
+            throw DriverError.failure("exported evidence is not readable JSON: \(path)")
+        }
     }
 
     try writeJSON(snapshot(application), to: output.appendingPathComponent("accessibility.json"))
     try writeJSON([
         "platform": "macos",
-        "actions": ["press:Validate bench"],
+        "targetMode": "simulator",
+        "actions": [
+            "press:Validate bench",
+            "press:Verify plan.sim.json (bundled fixture)",
+            "press:Export evidence",
+            "press:Verify plan.sim-missing-image.json (failure injection)",
+            "press:Export evidence",
+        ],
         "assertions": [
             "packaged SwiftUI window activated",
+            "target and simulator mode rendered on the identity card",
             "Validate bench exposed through macOS Accessibility",
-            "validation request crossed RVT1 into the simulated ECU backend",
-            "native result contains ok=true",
+            "readiness request crossed RVT1 into the simulated ECU backend",
+            "bundled simulator fixture verified with a fingerprint, no checkout present",
+            "missing-image fixture produced the distinct segment-unavailable recovery",
+            "two evidence exports written under Application Support and readable as JSON",
+            "no real ECU flashing was initiated by this acceptance",
         ],
     ], to: output.appendingPathComponent("interaction-trace.json"))
 

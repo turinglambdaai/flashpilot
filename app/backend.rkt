@@ -5,16 +5,19 @@
 ;; over the flashing engine, plans, readiness and evidence.
 
 (require rivet/backend
+         rivet/resources
          json
          racket/file
          racket/format
          racket/list
+         racket/path
          racket/string)
 
 (require flashpilot/core/contracts
          flashpilot/diagnostics/channels/sim-uds-channel
          flashpilot/diagnostics/doip/doip
          flashpilot/diagnostics/flash/plans
+         flashpilot/diagnostics/flash/validation
          flashpilot/diagnostics/uds/protocol)
 
 (provide start)
@@ -24,33 +27,24 @@
 
 (define sim-channel (make-sim-uds-channel))
 
-(define (jsexpr->text j)
-  (let loop ([v j])
-    (cond
-      [(hash? v)
-       (string-append
-        "{"
-        (string-join
-         (for/list ([(k val) (in-hash v)])
-           (format "~a:~a" (jsexpr->string (format "~a" k)) (loop val)))
-         ",")
-        "}")]
-      [(list? v)
-       (string-append "[" (string-join (map loop v) ",") "]")]
-      [(string? v) (format "~s" v)]
-      [(eq? v 'null) "null"]
-      [(boolean? v) (if v "true" "false")]
-      [(real? v) (~r v #:precision '(= 3))]
-      [else (format "~s" (format "~a" v))])))
-
 ;; Read-only: the simulated bench identity + capability surface. Real
-;; transports (DoIP/CAN) attach where this state is created today.
+;; transports (DoIP/CAN) attach where this state is created today. `mode`
+;; is the honest target label the native shells must render; `fixtures`
+;; points at the simulator plans shipped inside the package (null when
+;; running outside a packaged or staged app layout).
+(define (bundled-fixtures-dir)
+  (with-handlers ([exn:fail? (lambda (_) #f)])
+    (define dir (resource-path "examples"))
+    (and (directory-exists? dir) (path->string dir))))
+
 (define-rpc (bench-status : String)
   (jsexpr->string
    (hasheq 'product "FlashPilot"
            'version "0.1.0"
+           'mode "simulator"
            'transport "sim-uds"
            'ecu "BenchPilot sim-ecu v1.0.4"
+           'fixtures (or (bundled-fixtures-dir) 'null)
            'ready #t)))
 
 ;; Readiness: the plan-less preflight — transports configured, ECU alive.
@@ -65,31 +59,83 @@
                          'severity "error"
                          'summary "Simulated ECU answers UDS requests.")))))
 
-;; Plan verification without ECU contact: structure + fingerprint gate.
-(define-rpc (verify-plan [planPath String] : String)
-  (define hardening (read-flash-plan-json (file->string planPath)))
+;; Plan verification without ECU contact. Mirrors the CLI (`flashpilot
+;; validate`/`verify`): segment files resolve relative to the plan's own
+;; directory, structural lint runs on file-backed segments, and the
+;; fingerprint gate is checked against expectedFingerprint. Every expected
+;; failure returns a distinct recovery kind — plan-unreadable,
+;; plan-invalid, segment-unavailable — instead of a cross-wire exception,
+;; so shells can render honest recovery instead of a dead screen.
+(struct exn:verify-abort exn:fail (kind message) #:transparent)
+
+(define (verify-abort kind message)
+  (raise (exn:verify-abort (format "~a: ~a" kind message)
+                           (current-continuation-marks)
+                           kind
+                           message)))
+
+(define (plan-base-directory plan-path)
+  (path->string
+   (path-only (simplify-path (path->complete-path plan-path)))))
+
+(define (verify-plan-result plan-path)
+  (define text
+    (with-handlers ([exn:verify-abort? raise]
+                    [exn:fail? (lambda (e)
+                                 (verify-abort "plan-unreadable" (exn-message e)))])
+      (file->string plan-path)))
+  (define hardening
+    (with-handlers ([exn:verify-abort? raise]
+                    [exn:benchpilot:validation?
+                     (lambda (e) (verify-abort "plan-invalid" (exn-message e)))])
+      (read-flash-plan-json text)))
   (define plan (uds-flash-hardening-plan hardening))
-  (define fingerprint
-    (flash-plan-fingerprint
-     (for/list ([seg (in-list (uds-flash-plan-segments plan))])
-       (if (and (uds-flash-segment-data seg) (not (null? (uds-flash-segment-data seg))))
-           seg
-           (uds-flash-segment (uds-flash-segment-address seg)
-                              (or (and (uds-flash-segment-file seg)
-                                       (file->bytes (uds-flash-segment-file seg))
-                                       (let () (void))
-                                       '())
-                                  (uds-flash-segment-data seg))
-                              (uds-flash-segment-file seg))))))
+  (define base-dir (plan-base-directory plan-path))
+  (define loaded
+    (for/list ([seg (in-list (uds-flash-plan-segments plan))])
+      (if (and (uds-flash-segment-data seg) (not (null? (uds-flash-segment-data seg))))
+          seg
+          (with-handlers
+              ([exn:verify-abort? raise]
+               [exn:benchpilot:validation?
+                (lambda (e)
+                  (define message (exn-message e))
+                  (if (string-prefix? message "Flash plan segment file not found")
+                      (verify-abort "segment-unavailable" message)
+                      (verify-abort "plan-invalid" message)))])
+            (struct-copy uds-flash-segment seg
+                         [data (bytes->list
+                                (read-segment-file (uds-flash-segment-file seg)
+                                                   base-dir))])))))
+  (define plan* (struct-copy uds-flash-plan plan [segments loaded]))
+  (define issues (plan-validation-issues plan*))
+  (define blocking (plan-blocking-errors issues))
+  (define fingerprint (flash-plan-fingerprint (uds-flash-plan-segments plan*)))
   (define expected (uds-flash-hardening-expected-fingerprint hardening))
-  (jsexpr->string
-   (hasheq 'ok #t
-           'segments (length (uds-flash-plan-segments plan))
-           'fingerprint fingerprint
-           'expected (or expected 'null)
-           'match (if expected (string-ci=? expected fingerprint) 'null)
-           'onFail (or (uds-flash-hardening-on-fail hardening) 'null)
-           'powerGuard (if (uds-flash-hardening-power-guard hardening) 'configured 'null))))
+  (define match (and expected (string-ci=? expected fingerprint)))
+  (hasheq 'ok (and (null? blocking) (if expected match #t))
+          'file plan-path
+          'error 'null
+          'findings (plan-issues->json issues)
+          'segments (length loaded)
+          'fingerprint fingerprint
+          'expected (or expected 'null)
+          'match (if expected match 'null)
+          'onFail (or (let ([of (uds-flash-hardening-on-fail hardening)])
+                        (and of (symbol->string of)))
+                      'null)
+          'powerGuard (if (uds-flash-hardening-power-guard hardening) 'configured 'null)))
+
+(define-rpc (verify-plan [planPath String] : String)
+  (with-handlers ([exn:verify-abort?
+                   (lambda (e)
+                     (jsexpr->string
+                      (hasheq 'ok #f
+                              'file planPath
+                              'error (hasheq 'kind (exn:verify-abort-kind e)
+                                             'message (exn:verify-abort-message e))
+                              'findings '())))])
+    (jsexpr->string (verify-plan-result planPath))))
 
 ;; DTC read against the attached ECU.
 (define-rpc (dtc-read : String)
