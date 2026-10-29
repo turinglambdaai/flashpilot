@@ -51,3 +51,28 @@ jobs:
           racket app/cli.rkt flash examples/plan.sim-fd.json
           racket app/cli.rkt flash examples/plan.sim.json --transport lin
           racket scripts/mcp-smoke.rkt
+
+  portable-windows-archive:
+    name: Windows extracted CLI ZIP contract
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Racket
+        uses: Bogdanp/setup-racket@v1.15
+        with:
+          architecture: x64
+          distribution: full
+          variant: CS
+          version: '9.3'
+      - name: Install CLI engine
+        run: raco pkg install --auto --name flashpilot --link racket
+      - name: Build the same portable CLI staging used by release
+        shell: bash
+        run: bash scripts/build-cli-distribution.sh
+      - name: Archive with the release ZIP procedure
+        shell: pwsh
+        run: Compress-Archive -Path stage/* -DestinationPath flashpilot-ci-windows-x64.zip
+      - name: Extract away from checkout and exercise the bundled runtime
+        shell: pwsh
+        run: '& scripts/windows-cli-archive-smoke.ps1 -Archive flashpilot-ci-windows-x64.zip'
