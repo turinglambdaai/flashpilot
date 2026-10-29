@@ -12,9 +12,9 @@ The AGPL engine, CLI and MCP remain free, including CI use under the existing li
 
 Desktop source/preview paths target macOS, Windows and Linux. The published archive set does not imply every adapter, ECU or bus has been qualified.
 
-Use [official Releases](https://github.com/turinglambdaai/flashpilot/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Preview builds may lack publisher signing or notarization; do not disable system-wide security protections to install them.
+Use [official Releases](https://github.com/turlamai/flashpilot/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Preview builds may lack publisher signing or notarization; do not disable system-wide security protections to install them.
 
-Portable CLI archive entry points depend on the release: the published **v0.1.0 Windows ZIP** has `flashpilot.exe` at its root, while builds incorporating the [Windows archive-layout fix (#10)](https://github.com/turinglambdaai/flashpilot/issues/10) use `bin/flashpilot.exe`. macOS and Linux CLI ZIPs use `bin/flashpilot`. Extract the **whole archive** without moving just the executable: Racket's support-library subdirectories are OS-specific and must remain intact.
+Portable CLI archive entry points depend on the release: the published **v0.1.0 Windows ZIP** has `flashpilot.exe` at its root, while builds incorporating the [Windows archive-layout fix (#10)](https://github.com/turlamai/flashpilot/issues/10) use `bin/flashpilot.exe`. macOS and Linux CLI ZIPs use `bin/flashpilot`. Extract the **whole archive** without moving just the executable: Racket's support-library subdirectories are OS-specific and must remain intact.
 
 ## Your first successful session
 
@@ -40,7 +40,7 @@ Back up data and read the destination release notes first. An in-app update chec
 
 ## Get help
 
-Report problems in [GitHub Issues](https://github.com/turinglambdaai/flashpilot/issues), in English or Chinese. Include the version, OS/architecture, installation channel, steps, expected result and actual result. Reproduce with synthetic input first; do not attach keys, credentials, databases, private source documents or complete logs. Public support has no guaranteed response time.
+Report problems in [GitHub Issues](https://github.com/turlamai/flashpilot/issues), in English or Chinese. Include the version, OS/architecture, installation channel, steps, expected result and actual result. Reproduce with synthetic input first; do not attach keys, credentials, databases, private source documents or complete logs. Public support has no guaranteed response time.
 
 ## Further reading
 

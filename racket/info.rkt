@@ -3,7 +3,7 @@
 (define collection 'multi)
 (define version "0.1.0")
 (define pkg-desc "FlashPilot: AI-native ECU flashing over UDS (CAN/DoIP/LIN)")
-(define pkg-authors '(turinglambdaai))
+(define pkg-authors '(turlamai))
 (define license 'AGPL-3.0)
 
 (define deps

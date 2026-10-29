@@ -3,7 +3,7 @@
 **Agent-native ECU flashing — UDS over CAN, DoIP and LIN, driven by declarative flash plans and built for coding agents.**
 The focused alternative to per-seat flashing suites: a free AGPL engine (no per-flash or per-seat fees, CI and agent automation included) with an official validated distribution planned as the paid tier — one resident-free CLI, deterministic JSON, exit codes that never lie, and failure evidence that lets an agent self-diagnose.
 
-[![CI](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turinglambdaai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![CI](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
 **English** · [中文](README.zh-CN.md) · [User guide](https://flashpilot.jrtx.site/guide.html)
 
@@ -33,7 +33,7 @@ Not a CANoe clone: no vehicle-network simulation, no CAPL, no analysis-window co
 
 The next gates: DoIP Ethernet hardening against real ECUs, hardware LIN adapters, and a plan library. CAN FD shipped: set `"dataLength": 64` in a plan (see `examples/plan.sim-fd.json`) and the whole loop — simulated ECU included — runs FD framing. LIN shipped simulated: `racket app/cli.rkt flash examples/plan.sim.json --transport lin`.
 
-**Released**: v0.1.0 ships the agent-first CLI (`flash` / `verify` / `dtc` / `request` / `udid`) for Windows x64, Linux x64/arm64 and macOS arm64/x64 — zip + SHA-256 per platform plus a combined SHA256SUMS on the [Releases](https://github.com/turinglambdaai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
+**Released**: v0.1.0 ships the agent-first CLI (`flash` / `verify` / `dtc` / `request` / `udid`) for Windows x64, Linux x64/arm64 and macOS arm64/x64 — zip + SHA-256 per platform plus a combined SHA256SUMS on the [Releases](https://github.com/turlamai/flashpilot/releases/latest) page. Bilingual user guide: <https://flashpilot.jrtx.site/guide.html>.
 
 ## Quick start
 
@@ -47,7 +47,7 @@ unzip flashpilot-0.1.0-macos-arm64.zip -d flashpilot
 Or run from source:
 
 ```bash
-git clone https://github.com/turinglambdaai/flashpilot.git
+git clone https://github.com/turlamai/flashpilot.git
 cd flashpilot
 raco pkg install --auto --name flashpilot --link racket
 racket app/cli.rkt flash examples/plan.sim.json
