@@ -73,34 +73,15 @@ jobs:
       - name: Compile CLI
         run: raco make app/cli.rkt
 
-      - name: Build executable
+      - name: Build and bundle CLI (shared with extracted archive CI)
         shell: bash
-        run: |
-          mkdir -p build
-          case '${{ runner.os }}' in
-            Windows) raco exe -o build/flashpilot.exe app/cli.rkt ;;
-            *)       raco exe -o build/flashpilot app/cli.rkt ;;
-          esac
-          # raco exe writes the binary read-only; distribute patches its copy
-          chmod u+w build/flashpilot*
-
-      - name: Bundle runtime
-        shell: bash
-        run: |
-          case '${{ runner.os }}' in
-            Windows) raco distribute stage build/flashpilot.exe ;;
-            *)       raco distribute stage build/flashpilot ;;
-          esac
-          # ship the sample plan + firmware so the archive runs its own
-          # simulated-ECU smoke right after unzip — no repo checkout needed
-          cp -R examples stage/examples
-          ls -la stage
+        run: bash scripts/build-cli-distribution.sh
 
       - name: Smoke the bundled binary (simulated ECU, hardware-free)
         shell: bash
         run: |
           EXE=stage/bin/flashpilot
-          [ '${{ runner.os }}' = 'Windows' ] && EXE=stage/flashpilot.exe
+          [ '${{ runner.os }}' = 'Windows' ] && EXE=stage/bin/flashpilot.exe
           "$EXE" --help
           "$EXE" verify examples/plan.sim.json
           "$EXE" flash examples/plan.sim.json
@@ -129,6 +110,13 @@ jobs:
           $version = $env:GITHUB_REF_NAME.Substring(1)
           $asset = "flashpilot-$version-windows-x64"
           Compress-Archive -Path stage/* -DestinationPath "$asset.zip"
+
+      - name: Exercise extracted Windows archive (actual published layout)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          & scripts/windows-cli-archive-smoke.ps1 -Archive "flashpilot-$version-windows-x64.zip"
 
       - name: Checksum
         shell: bash
@@ -182,7 +170,7 @@ jobs:
           fi
           {
             echo ""
-            echo "Standalone CLI archives — no Racket installation required. Unix archives unpack to \`bin/flashpilot\` + \`lib/\`; Windows to \`flashpilot.exe\` + runtime."
+            echo "Standalone CLI archives — no Racket installation required. Run \`bin/flashpilot\` on Unix/macOS or \`bin/flashpilot.exe\` on Windows. Racket's platform-specific runtime library placement is preserved."
             echo ""
             echo "Updates are manual: download the new archive and replace your install (no auto-updater in v0.1.0)."
             echo ""
