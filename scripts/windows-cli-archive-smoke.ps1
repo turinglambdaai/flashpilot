@@ -33,6 +33,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Extracted verify failed: $LASTEXITCODE" }
         & $exe flash $sample
         if ($LASTEXITCODE -ne 0) { throw "Extracted simulated flash failed: $LASTEXITCODE" }
+        # PowerShell/GitHub runners may treat a deliberately nonzero native
+        # exit as a terminating error before the assertion can inspect it.
+        $PSNativeCommandUseErrorActionPreference = $false
         & $exe bogus 2>$null
         if ($LASTEXITCODE -ne 2) {
             throw "Invalid-command exit code must be 2, got $LASTEXITCODE"
@@ -40,6 +43,10 @@ try {
     } finally {
         Pop-Location
     }
+    # The native negative-case command intentionally returned a nonzero code.
+    # Do not allow the GitHub PowerShell wrapper to mistake that verified
+    # expected result for the script's own exit status.
+    $global:LASTEXITCODE = 0
 } finally {
     if (Test-Path -LiteralPath $install) {
         Remove-Item -LiteralPath $install -Recurse -Force
