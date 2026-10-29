@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Fixed
+
+- The Windows standalone CLI ZIP now executes `bin/flashpilot.exe` instead of
+  the Racket-distribute default of a root-level executable (issue #10).
+  Building directly into `stage/bin` preserves Racket's Windows DLL lookup;
+  CI extracts the actual ZIP into a fresh directory and verifies CLI commands,
+  simulated flash and failure exit code, without depending on the source tree.
+  Existing v0.1.0 artifacts are unchanged.
+
 ### Added
 
 - **Support matrix as code** — `flashpilot transports --json` emits every
