@@ -12,9 +12,9 @@ AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使�
 
 桌面源码和预览路径面向 macOS、Windows、Linux。发布压缩包不表示所有适配器、ECU 和总线均已合格。
 
-从[官方 Releases](https://github.com/turinglambdaai/flashpilot/releases)选择明确标注系统和架构的附件，阅读该版本说明并核对附带校验文件。未列出的附件或平台不视为已交付。预览构建可能没有系统发行者签名或公证；不要为安装而关闭系统安全保护。
+从[官方 Releases](https://github.com/turlamai/flashpilot/releases)选择明确标注系统和架构的附件，阅读该版本说明并核对附带校验文件。未列出的附件或平台不视为已交付。预览构建可能没有系统发行者签名或公证；不要为安装而关闭系统安全保护。
 
-便携版 CLI 压缩包的执行路径随版本而异：已发布的 **v0.1.0 Windows ZIP** 在根目录放置 `flashpilot.exe`；包含 [Windows 压缩包目录修复（#10）](https://github.com/turinglambdaai/flashpilot/issues/10) 的后续构建改为 `bin/flashpilot.exe`。macOS 和 Linux CLI ZIP 使用 `bin/flashpilot`。请完整解压，勿只移动可执行文件：Racket 的运行库目录布局随操作系统而不同，需要原样保留。
+便携版 CLI 压缩包的执行路径随版本而异：已发布的 **v0.1.0 Windows ZIP** 在根目录放置 `flashpilot.exe`；包含 [Windows 压缩包目录修复（#10）](https://github.com/turlamai/flashpilot/issues/10) 的后续构建改为 `bin/flashpilot.exe`。macOS 和 Linux CLI ZIP 使用 `bin/flashpilot`。请完整解压，勿只移动可执行文件：Racket 的运行库目录布局随操作系统而不同，需要原样保留。
 
 ## 第一次使用
 
@@ -40,7 +40,7 @@ AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使�
 
 ## 获得帮助
 
-在 [GitHub Issues](https://github.com/turinglambdaai/flashpilot/issues) 反馈，中文或英文均可。提供版本、系统与架构、安装渠道、复现步骤、预期和实际结果。先用合成样本复现；不要附上密钥、授权文件、数据库、原始私密文档或完整日志。公开支持不承诺响应时限。
+在 [GitHub Issues](https://github.com/turlamai/flashpilot/issues) 反馈，中文或英文均可。提供版本、系统与架构、安装渠道、复现步骤、预期和实际结果。先用合成样本复现；不要附上密钥、授权文件、数据库、原始私密文档或完整日志。公开支持不承诺响应时限。
 
 ## 深入阅读
 
