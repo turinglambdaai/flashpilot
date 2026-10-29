@@ -14,6 +14,8 @@ Desktop source/preview paths target macOS, Windows and Linux. The published arch
 
 Use [official Releases](https://github.com/turinglambdaai/flashpilot/releases), select an explicitly listed OS/architecture asset, read its release notes and check supplied checksums. An absent asset/platform is not a delivery promise. Preview builds may lack publisher signing or notarization; do not disable system-wide security protections to install them.
 
+Portable CLI archive entry points depend on the release: the published **v0.1.0 Windows ZIP** has `flashpilot.exe` at its root, while builds incorporating the [Windows archive-layout fix (#10)](https://github.com/turinglambdaai/flashpilot/issues/10) use `bin/flashpilot.exe`. macOS and Linux CLI ZIPs use `bin/flashpilot`. Extract the **whole archive** without moving just the executable: Racket's support-library subdirectories are OS-specific and must remain intact.
+
 ## Your first successful session
 
 1. Read the manual and choose a supplied simulator/example plan.
