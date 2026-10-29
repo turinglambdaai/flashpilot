@@ -14,6 +14,8 @@ AGPL 引擎、CLI 和 MCP 保持免费，包含现行许可证允许的 CI 使�
 
 从[官方 Releases](https://github.com/turinglambdaai/flashpilot/releases)选择明确标注系统和架构的附件，阅读该版本说明并核对附带校验文件。未列出的附件或平台不视为已交付。预览构建可能没有系统发行者签名或公证；不要为安装而关闭系统安全保护。
 
+便携版 CLI 压缩包的执行路径随版本而异：已发布的 **v0.1.0 Windows ZIP** 在根目录放置 `flashpilot.exe`；包含 [Windows 压缩包目录修复（#10）](https://github.com/turinglambdaai/flashpilot/issues/10) 的后续构建改为 `bin/flashpilot.exe`。macOS 和 Linux CLI ZIP 使用 `bin/flashpilot`。请完整解压，勿只移动可执行文件：Racket 的运行库目录布局随操作系统而不同，需要原样保留。
+
 ## 第一次使用
 
 1. 先阅读手册，选择随库提供的模拟器和示例计划。
