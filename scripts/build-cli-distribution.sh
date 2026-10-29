@@ -13,7 +13,7 @@ else
   destination="stage"
 fi
 
-mkdir -p build
+mkdir -p build stage
 raco exe -o "$exe" app/cli.rkt
 chmod u+w "$exe"
 raco distribute "$destination" "$exe"
