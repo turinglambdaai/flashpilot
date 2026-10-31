@@ -1,7 +1,7 @@
 # FlashPilot
 
 **Agent 原生的 ECU 烧录——CAN、DoIP 和 LIN 上的 UDS，由声明式烧录计划驱动，为编码 agent 而生。**
-对标按席位收费烧录套件的专注替代品：免费 AGPL 引擎（无按次/按席位费用，CI 与 agent 自动化包含在内），官方验证发行版作为规划中的付费层——一个无常驻进程的 CLI、确定性 JSON、永不撒谎的退出码，以及让 agent 自我诊断的失败证据。
+FlashPilot 提供可自动化的烧录流程：免费 AGPL 引擎（无按次/按席位费用，CI 与 agent 自动化包含在内），官方验证发行版作为规划中的付费层——一个无常驻进程的 CLI、确定性 JSON、永不撒谎的退出码，以及让 agent 自我诊断的失败证据。
 
 [![CI](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/turlamai/flashpilot/actions/workflows/ci.yml) ![platform](https://img.shields.io/badge/platform-Windows_%7C_Linux_%7C_macOS-lightgrey) [![built with](https://img.shields.io/badge/built%20with-Racket-9F1D35)](https://racket-lang.org/) [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
